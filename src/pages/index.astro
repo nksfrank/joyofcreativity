@@ -1,5 +1,5 @@
 ---
-
+import {m} from "@/i18n/messages";
 ---
 
 <html lang="en">
@@ -12,6 +12,11 @@
 		<title>Astro</title>
 	</head>
 	<body>
-		<h1>Astro</h1>
+    <hgroup>
+    <h1>Astro</h1>
+    <p>{m.example_message({ username: "Niklas" })}</p>
+    </hgroup>
+    <section>
+    </section>
 	</body>
 </html>

@@ -7,11 +7,13 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro build && wrangler pages dev",
-    "astro": "astro",
-    "generate-types": "wrangler types",
-    "deploy": "astro build && wrangler pages deploy",
+    "prebuild": "paraglide-js compile --project ./project.inlang --outdir ./src/i18n",
+    "build": " astro build",
+    "preview": "npm run build && wrangler dev",
+    "format": "biome format",
+    "lint": "biome lint",
+    "check": "biome check",
+    "deploy": "npm run build && wrangler deploy",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
@@ -19,7 +21,11 @@
     "astro": "^7.0.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.2",
     "@types/node": "^26.1.0",
-    "wrangler": "^4.107.0"
+    "typescript": "^6.0.3",
+    "wrangler": "^4.107.0",
+    "@inlang/paraglide-js": "^2.20.2",
+    "@inlang/cli": "^3.0.0"
   }
 }
