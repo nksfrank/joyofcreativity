@@ -8,10 +8,10 @@
   "compatibility_date": "2026-07-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
-    "directory": "./dist/client",
+    "directory": "./dist/client"
   },
   "observability": {
-    "enabled": true,
+    "enabled": true
   },
-  "upload_source_maps": true,
+  "upload_source_maps": true
 }

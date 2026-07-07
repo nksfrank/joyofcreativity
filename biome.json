@@ -6,11 +6,16 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!!**/dist"]
+    "includes": [
+      "**/src/**/*",
+      "**/.vscode/**/*",
+      "!**/dist",
+      "!worker-configuration.d.ts"
+    ]
   },
   "formatter": {
     "enabled": true,
-    "indentStyle": "tab"
+    "indentStyle": "space"
   },
   "linter": {
     "enabled": true,

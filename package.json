@@ -10,6 +10,8 @@
     "prebuild": "paraglide-js compile --project ./project.inlang --outdir ./src/i18n",
     "build": " astro build",
     "preview": "npm run build && wrangler dev",
+    "test": "vitest",
+    "test:e2e": "playwright test",
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
@@ -17,15 +19,17 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^14.1.1",
-    "astro": "^7.0.6"
+    "@astrojs/cloudflare": "14.1.1",
+    "astro": "7.0.6"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.2",
-    "@types/node": "^26.1.0",
-    "typescript": "^6.0.3",
-    "wrangler": "^4.107.0",
-    "@inlang/paraglide-js": "^2.20.2",
-    "@inlang/cli": "^3.0.0"
+    "@biomejs/biome": "2.5.2",
+    "@inlang/cli": "3.0.0",
+    "@inlang/paraglide-js": "2.20.2",
+    "@playwright/test": "1.61.1",
+    "@types/node": "26.1.0",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10",
+    "wrangler": "4.107.0"
   }
 }
