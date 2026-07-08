@@ -1,0 +1,29 @@
+---
+import { getLocale, localizeHref } from "@/i18n/runtime";
+
+const { title } = Astro.props;
+---
+
+<html lang={getLocale()}>
+  <head>
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <nav>
+      <ul>
+        <a href="/">Home</a>
+        <a href={localizeHref("/category/1-sweaters")}>Sweaters</a>
+        <a href="#">Contact</a>
+
+      </ul>
+    </nav>
+    <main>
+      <slot /> <!-- your content is injected here -->
+    </main>
+  </body>
+</html>
