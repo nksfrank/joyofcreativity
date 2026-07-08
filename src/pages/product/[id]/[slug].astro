@@ -1,9 +1,8 @@
 ---
 import SiteLayout from "@/components/layouts/SiteLayout.astro";
-import ProductConfigurator from "@/components/product/ProductConfigurator.astro";
 import { getLocale } from "@/i18n/runtime";
 import { formatMoney } from "@/libs/pricing";
-import { getAllProductDetails, getProductById } from "@/libs/product.data";
+import { getAllProductDetails, getProductById } from "@/libs/product";
 import { resolveProductDetailVariants } from "@/libs/product.utils";
 import { assert } from "@/utils/assert";
 
@@ -28,6 +27,5 @@ const variants = resolveProductDetailVariants(detail);
     <p>{detail.details.description}</p>
     <p>{formatMoney(product.price, getLocale())}</p>
 
-    <ProductConfigurator product={product} detail={detail} variants={variants} />
   </article>
 </SiteLayout>

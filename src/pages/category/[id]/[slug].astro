@@ -1,0 +1,15 @@
+---
+import SiteLayout from "@/components/layouts/SiteLayout.astro";
+
+export function getStaticPaths() {
+  return ["sweaters"].map(slug => ({ params: { id: "1", slug } }));
+}
+
+const { slug } = Astro.params;
+---
+
+<SiteLayout>
+<hgroup>
+  <h1>Category: {slug}</h1>
+</hgroup>
+</SiteLayout>
