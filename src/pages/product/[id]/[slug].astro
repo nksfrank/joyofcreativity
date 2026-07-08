@@ -1,31 +1,65 @@
 ---
+import Configurator from "@/components/Configurator.tsx";
 import SiteLayout from "@/components/layouts/SiteLayout.astro";
 import { getLocale } from "@/i18n/runtime";
-import { formatMoney } from "@/libs/pricing";
-import { getAllProductDetails, getProductById } from "@/libs/product";
-import { resolveProductDetailVariants } from "@/libs/product.utils";
+import {
+  getAllProducts,
+  getProductById,
+  getProductDetailsByProductId,
+} from "@/libs/product";
+import { resolveColourNav, resolveColourPages } from "@/libs/product.utils";
 import { assert } from "@/utils/assert";
 
 export function getStaticPaths() {
-  return getAllProductDetails().map((detail) => ({
-    params: { id: detail.id, slug: detail.details.slug },
-    props: { detail },
-  }));
+  return getAllProducts().flatMap((product) =>
+    resolveColourPages(product.id).map((page) => ({
+      params: { id: page.id, slug: page.slug },
+      props: { page },
+    })),
+  );
 }
 
-const { detail } = Astro.props;
-const product = getProductById(detail.productId);
-assert(product, `Product ${detail.productId} not found`);
+const { page } = Astro.props;
+const product = getProductById(page.productId);
+assert(product, `Product ${page.productId} not found`);
 
-const variants = resolveProductDetailVariants(detail);
+const colourNav = resolveColourNav(page.productId, page.colorId);
+const productName =
+  getProductDetailsByProductId(page.productId)[0]?.details.name ?? page.name;
+const locale = getLocale();
 ---
 
-<SiteLayout title={detail.details.name}>
+<SiteLayout title={page.name}>
   <article>
-    <img src={detail.details.image} alt={detail.details.name} />
-    <h1>{detail.details.name}</h1>
-    <p>{detail.details.description}</p>
-    <p>{formatMoney(product.price, getLocale())}</p>
+    {page.image && <img src={page.image} alt={page.name} />}
+    <h1>{page.name}</h1>
+    <p>{page.description}</p>
 
+    <nav aria-label="Colour">
+      <ul>
+        {
+          colourNav.map((colour) => (
+            <li>
+              <a
+                href={colour.href}
+                data-testid="colour-option"
+                aria-current={colour.isCurrent ? "true" : undefined}
+              >
+                {colour.colourName}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <Configurator
+      client:load
+      definition={product}
+      colorId={page.colorId}
+      colourName={page.colourName}
+      productName={productName}
+      locale={locale}
+    />
   </article>
 </SiteLayout>

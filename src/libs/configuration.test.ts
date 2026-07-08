@@ -88,6 +88,19 @@ describe("ConfigurationModel.yarnOptions", () => {
     expect(unavailable?.disabled).toBe(true);
     expect(ok?.disabled).toBe(false);
   });
+
+  it("keeps an already-selected yarn enabled at the pattern's allowedYarnCount", () => {
+    // "plain" allows 1 yarn; once yarnOk is chosen it must stay de-selectable
+    // rather than lock as disabled+checked.
+    const model = new ConfigurationModel(definition, "cream").select({
+      sizeId: "small",
+      patternId: "plain",
+      yarnColorIds: ["yarnOk"],
+    });
+
+    const selected = model.yarnOptions().find((y) => y.id === "yarnOk");
+    expect(selected?.disabled).toBe(false);
+  });
 });
 
 describe("ConfigurationModel.price", () => {
