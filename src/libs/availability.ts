@@ -77,7 +77,7 @@ const patternYarnCountValid: AvailabilityFn = (definition) => (item) => {
   );
   assert(variant, `Pattern with id ${item.patternId} not found`);
 
-  if (item.yarnColorIds.length >= variant.allowedYarnCount) {
+  if (item.yarnColorIds.length > variant.allowedYarnCount) {
     return {
       ok: false,
       reason: `Pattern ${variant.pattern.name} allows only ${variant.allowedYarnCount} yarn colors`,

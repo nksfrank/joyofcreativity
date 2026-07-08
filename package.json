@@ -7,9 +7,11 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "prebuild": "paraglide-js compile --project ./project.inlang --outdir ./src/i18n",
+    "i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/i18n",
+    "prebuild": "npm run i18n",
     "build": " astro build",
     "preview": "npm run build && wrangler dev",
+    "pretest": "npm run i18n",
     "test": "vitest",
     "test:e2e": "playwright test",
     "format": "biome format",
