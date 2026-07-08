@@ -1,13 +1,10 @@
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  // Mirror the `@/*` path alias from tsconfig.json so unit tests can import
-  // modules the same way the app does.
+  // Resolve the `@/*` path alias from tsconfig.json, matching astro.config.mjs,
+  // so unit tests import modules the same way the app does.
   resolve: {
-    alias: {
-      "@": fileURLToPath(new URL("./src", import.meta.url)),
-    },
+    tsconfigPaths: true,
   },
   test: {
     exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"],
