@@ -1,0 +1,12 @@
+---
+import CartView from "@/components/CartView.tsx";
+import SiteLayout from "@/components/layouts/SiteLayout.astro";
+import { getLocale } from "@/i18n/runtime";
+
+const locale = getLocale();
+---
+
+<SiteLayout title="Cart">
+  <h1>Cart</h1>
+  <CartView client:load locale={locale} />
+</SiteLayout>

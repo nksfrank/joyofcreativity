@@ -1,6 +1,7 @@
 // @ts-check
 
 import cloudflare from "@astrojs/cloudflare";
+import preact from "@astrojs/preact";
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import { defineConfig } from "astro/config";
 import { baseLocale, locales } from "./src/i18n/runtime";
@@ -8,6 +9,7 @@ import { baseLocale, locales } from "./src/i18n/runtime";
 // https://astro.build/config
 export default defineConfig({
   output: "static",
+  integrations: [preact()],
   i18n: {
     defaultLocale: baseLocale,
     locales: [...locales],

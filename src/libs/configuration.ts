@@ -62,15 +62,24 @@ export class ConfigurationModel {
   }
 
   yarnOptions(): OptionView[] {
-    return this.definition.availableYarnColours.map((yarn) => ({
-      id: yarn.id,
-      label: yarn.name,
-      disabled: !this.hasCompletion({
-        sizeId: this.selection.sizeId,
-        patternId: this.selection.patternId,
-        yarnColorIds: [...this.selection.yarnColorIds, yarn.id],
-      }),
-    }));
+    return this.definition.availableYarnColours.map((yarn) => {
+      // An already-selected yarn is probed with the current set (so it stays
+      // enabled and de-selectable); an unselected one is probed with it added,
+      // so a choice that would exceed the pattern's allowedYarnCount disables.
+      const selected = this.selection.yarnColorIds.includes(yarn.id);
+      const probe = selected
+        ? this.selection.yarnColorIds
+        : [...this.selection.yarnColorIds, yarn.id];
+      return {
+        id: yarn.id,
+        label: yarn.name,
+        disabled: !this.hasCompletion({
+          sizeId: this.selection.sizeId,
+          patternId: this.selection.patternId,
+          yarnColorIds: probe,
+        }),
+      };
+    });
   }
 
   price(): Price | null {
@@ -97,7 +106,8 @@ export class ConfigurationModel {
     ) {
       return {
         reset: "patternId",
-        reason: "This pattern is not available in any in-stock size for this colour.",
+        reason:
+          "This pattern is not available in any in-stock size for this colour.",
       };
     }
     return {

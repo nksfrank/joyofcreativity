@@ -87,13 +87,18 @@ const patternYarnCountValid: AvailabilityFn = (definition) => (item) => {
   return { ok: true };
 };
 
+// Fires only for a text-forbidding product that was nevertheless given text, so a
+// forbidden product emits this single reason rather than also tripping the length rule.
 const customisationAllowed: AvailabilityFn = (definition) => (item) => {
-  return item.customisation && !definition.customisation.allowText
+  return item.customisation.length > 0 && !definition.customisation.allowText
     ? { ok: false, reason: `Customisation is not allowed for this product` }
     : { ok: true };
 };
+// Length is only meaningful when text is allowed; gating on allowText keeps a
+// text-forbidding product (maxLength 0) from emitting a bogus "max length 0" reason.
 const customisationValid: AvailabilityFn = (definition) => (item) => {
-  return item.customisation.length > definition.customisation.maxLength
+  return definition.customisation.allowText &&
+    item.customisation.length > definition.customisation.maxLength
     ? {
         ok: false,
         reason: `Customisation exceeds maximum length of ${definition.customisation.maxLength}`,
