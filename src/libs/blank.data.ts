@@ -66,9 +66,3 @@ const blanks: Blank[] = [
 
 export const getBlankById = (id: string): Blank | undefined =>
   blanks.find((blank) => blank.id === id);
-
-export const findBlankByColorAndSize = (
-  colorId: string,
-  sizeId: string,
-): Blank | undefined =>
-  blanks.find((blank) => blank.colorId === colorId && blank.sizeId === sizeId);

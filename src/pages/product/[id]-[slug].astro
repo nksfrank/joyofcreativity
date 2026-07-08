@@ -1,0 +1,33 @@
+---
+import SiteLayout from "@/components/layouts/SiteLayout.astro";
+import ProductConfigurator from "@/components/product/ProductConfigurator.astro";
+import { getLocale } from "@/i18n/runtime";
+import { formatMoney } from "@/libs/pricing";
+import { getAllProductDetails, getProductById } from "@/libs/product.data";
+import { resolveProductDetailVariants } from "@/libs/product.utils";
+import { assert } from "@/utils/assert";
+
+export function getStaticPaths() {
+  return getAllProductDetails().map((detail) => ({
+    params: { id: detail.id, slug: detail.details.slug },
+    props: { detail },
+  }));
+}
+
+const { detail } = Astro.props;
+const product = getProductById(detail.productId);
+assert(product, `Product ${detail.productId} not found`);
+
+const variants = resolveProductDetailVariants(detail);
+---
+
+<SiteLayout title={detail.details.name}>
+  <article>
+    <img src={detail.details.image} alt={detail.details.name} />
+    <h1>{detail.details.name}</h1>
+    <p>{detail.details.description}</p>
+    <p>{formatMoney(product.price, getLocale())}</p>
+
+    <ProductConfigurator product={product} detail={detail} variants={variants} />
+  </article>
+</SiteLayout>

@@ -37,16 +37,16 @@ export type PatternVariant = {
   allowedYarnCount: number;
 };
 
-type ProductDetails = {
+type ProductDetailTexts = {
   name: string;
   description: string;
   slug: string;
   image: string;
 };
 
+/** A product family: shared price, allowed blanks, and configuration options. */
 export type ProductDefinition = {
   id: string;
-  details: ProductDetails;
 
   price: Price;
 
@@ -56,9 +56,16 @@ export type ProductDefinition = {
   customisation: CustomisationRule;
 };
 
+/** One navigable page: a product family pinned to a single blank, with its own marketing texts. */
+export type ProductDetail = {
+  id: string;
+  productId: string;
+  blankId: string;
+  details: ProductDetailTexts;
+};
+
 export type ProductOrderItem = {
-  colorId: string;
-  sizeId: string;
+  blankId: string;
   patternId: string;
   yarnColorIds: string[];
 

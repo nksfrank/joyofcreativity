@@ -1,48 +1,36 @@
-import {
-  colors,
-  findBlankByColorAndSize,
-  getBlankById,
-  sizes,
-} from "./blank.data";
+import { colors, getBlankById, sizes } from "./blank.data";
 import type { Blank, Color, Size } from "./blank.types";
-import type { ProductDefinition, ProductOrderItem } from "./product.types";
+import { getProductDetailsByProductId } from "./product.data";
+import type { ProductDefinition, ProductDetail } from "./product.types";
 
-/**
- * Resolves a shopper's Color + Size pick to the shared blank, but only
- * if this product actually offers that blank.
- */
+/** Resolves a blank id to the shared blank, but only if this product actually offers it. */
 export const resolveProductBlank = (
   definition: Pick<ProductDefinition, "blanks">,
-  selection: Pick<ProductOrderItem, "colorId" | "sizeId">,
+  blankId: string,
 ): Blank | undefined => {
-  const blank = findBlankByColorAndSize(selection.colorId, selection.sizeId);
-  if (!blank) {
-    return undefined;
-  }
-  const offered = definition.blanks.some((pb) => pb.blankId === blank.id);
-  return offered ? blank : undefined;
+  const offered = definition.blanks.some((pb) => pb.blankId === blankId);
+  return offered ? getBlankById(blankId) : undefined;
 };
 
-/** A blank this product offers, joined with its color/size names for display. */
-export type BlankOption = {
-  blankId: string;
+/** A sibling ProductDetail of the same product family, for linking between variants. */
+export type ProductDetailVariant = ProductDetail & {
   color: Color;
   size: Size;
-  stock: number;
+  isCurrent: boolean;
 };
 
-/** Every Color x Size combination this product can be built from, for rendering pickers. */
-export const resolveProductBlankOptions = (
-  definition: Pick<ProductDefinition, "blanks">,
-): BlankOption[] =>
-  definition.blanks
-    .map((productBlank): BlankOption | undefined => {
-      const blank = getBlankById(productBlank.blankId);
+/** Every curated ProductDetail sharing this detail's product family, joined with its blank's color/size. */
+export const resolveProductDetailVariants = (
+  detail: Pick<ProductDetail, "id" | "productId">,
+): ProductDetailVariant[] =>
+  getProductDetailsByProductId(detail.productId)
+    .map((sibling): ProductDetailVariant | undefined => {
+      const blank = getBlankById(sibling.blankId);
       const color = colors.find((c) => c.id === blank?.colorId);
       const size = sizes.find((s) => s.id === blank?.sizeId);
       if (!blank || !color || !size) {
         return undefined;
       }
-      return { blankId: blank.id, color, size, stock: blank.stock };
+      return { ...sibling, color, size, isCurrent: sibling.id === detail.id };
     })
-    .filter((option) => option !== undefined);
+    .filter((variant) => variant !== undefined);

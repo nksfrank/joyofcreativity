@@ -1,0 +1,83 @@
+---
+import { localizeHref } from "@/i18n/runtime";
+import type { ProductDefinition, ProductDetail } from "@/libs/product.types";
+import type { ProductDetailVariant } from "@/libs/product.utils";
+
+type Props = {
+  product: ProductDefinition;
+  detail: ProductDetail;
+  variants: ProductDetailVariant[];
+};
+
+const { product, variants } = Astro.props;
+---
+
+<form>
+  {
+    variants.length > 1 && (
+      <fieldset>
+        <legend>Variant</legend>
+        <ul>
+          {variants.map((variant) => (
+            <li>
+              {variant.isCurrent ? (
+                <strong>
+                  {variant.color.name} {variant.size.name}
+                </strong>
+              ) : (
+                <a
+                  href={localizeHref(
+                    `/product/${variant.id}-${variant.details.slug}`,
+                  )}
+                >
+                  {variant.color.name} {variant.size.name}
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      </fieldset>
+    )
+  }
+
+  {
+    product.patternVariants.length > 0 && (
+      <fieldset>
+        <legend>Pattern</legend>
+        <select name="patternId">
+          {product.patternVariants.map((variant) => (
+            <option value={variant.pattern.id}>{variant.pattern.name}</option>
+          ))}
+        </select>
+      </fieldset>
+    )
+  }
+
+  {
+    product.availableYarnColours.length > 0 && (
+      <fieldset>
+        <legend>Yarn colour</legend>
+        <select name="yarnColorIds" multiple>
+          {product.availableYarnColours.map((yarnColor) => (
+            <option value={yarnColor.id} disabled={!yarnColor.available}>
+              {yarnColor.name}
+            </option>
+          ))}
+        </select>
+      </fieldset>
+    )
+  }
+
+  {
+    product.customisation.allowText && (
+      <fieldset>
+        <legend>Customisation</legend>
+        <input
+          type="text"
+          name="customisation"
+          maxlength={product.customisation.maxLength}
+        />
+      </fieldset>
+    )
+  }
+</form>

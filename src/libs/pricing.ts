@@ -28,11 +28,8 @@ const applyModifier = (
     : Math.round((basePrice.amount * modifier.value) / 100);
 
 const blankPrice: PriceRule = (definition) => (item) => {
-  const blank = resolveProductBlank(definition, item);
-  assert(
-    blank,
-    `Blank for color ${item.colorId} and size ${item.sizeId} not found`,
-  );
+  const blank = resolveProductBlank(definition, item.blankId);
+  assert(blank, `Blank ${item.blankId} not found`);
   const productBlank = definition.blanks.find((pb) => pb.blankId === blank.id);
   assert(productBlank, `Blank ${blank.id} not offered by this product`);
   return applyModifier(definition.price, productBlank.priceModifier);

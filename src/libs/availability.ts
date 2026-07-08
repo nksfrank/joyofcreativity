@@ -14,7 +14,7 @@ type AvailabilityRule = (item: ProductOrderItem) => RuleResult;
 type AvailabilityFn = (definition: ProductDefinition) => AvailabilityRule;
 
 const blankInStock: AvailabilityFn = (definition) => (item) => {
-  const blank = resolveProductBlank(definition, item);
+  const blank = resolveProductBlank(definition, item.blankId);
   if (!blank) {
     return {
       ok: false,
@@ -39,11 +39,8 @@ const patternCompatibleWithBlank: AvailabilityFn = (definition) => (item) => {
   );
   assert(variant, `Pattern with id ${item.patternId} not found`);
 
-  const blank = resolveProductBlank(definition, item);
-  assert(
-    blank,
-    `Blank for color ${item.colorId} and size ${item.sizeId} not found`,
-  );
+  const blank = resolveProductBlank(definition, item.blankId);
+  assert(blank, `Blank ${item.blankId} not found`);
 
   const compatible = variant.compatibleBlankIds.includes(blank.id);
   if (!compatible) {
