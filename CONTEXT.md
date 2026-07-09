@@ -26,16 +26,13 @@ Use these terms verbatim in code, tests, issues, and docs. Avoid the listed syno
 - **Product Order Item** — a *complete, resolved* configuration: `{ blankId, patternId,
   yarnColorIds, customisation }`. The unit the pricing and availability engines evaluate.
 - **Pattern** / **Pattern Variant** — a knit pattern plus the blanks it is `compatibleBlankIds`
-  and the exact number of yarn colours it takes (`requiredYarnCount`, see ADR-0009). **Required**
-  on every order item.
-- **Yarn Colour** — a selectable yarn thread colour. A pattern takes exactly `requiredYarnCount`
-  of them as an order-insignificant multiset (duplicates allowed, no per-field roles — ADR-0009);
-  `requiredYarnCount: 0` is a plain knit with no yarn choice.
-- **Single-alternative attribute** — a required attribute the family defines exactly *one* option
-  for (one size for a colour, one pattern, one colour, or a yarn field with one available colour).
-  The configurator pre-fills it so the customer never picks a choice that has no alternative; the
-  trigger is the **structural** option count, never "one option left enabled after feasibility
-  disabled the rest" (ADR-0010). A sole colour hides its switcher entirely (ADR-0006/0010).
+  and the *exact* number of yarn colours it takes (`requiredYarnCount`). **Required** on every
+  order item. A `requiredYarnCount` of 0 is a plain knit with no yarn choice.
+- **Yarn Colour** — a selectable yarn thread colour. The chosen pattern fixes exactly how many are
+  picked (`requiredYarnCount`); the customer fills that many single-choice fields. The same colour
+  **may repeat** across fields and **order is insignificant** — the selection is a *multiset*, so
+  `[red, blue]` and `[blue, red]` are the same product. See ADR-0009. _Not_ "up to N" — it is
+  exactly N.
 - **Customisation** — free text applied to the product, bounded by the family's `CustomisationRule`
   (`allowText`, `maxLength`).
 - **Price Modifier** — a `fixed` (absolute minor-units) or `percentage` adjustment to the family
@@ -54,6 +51,11 @@ Use these terms verbatim in code, tests, issues, and docs. Avoid the listed syno
 - **Configurator** *(new)* — the hydrated island on the product page that renders the Configuration
   Model and drives it as the customer changes selections. Colour is **route-driven** (ADR-0006),
   not island state.
+- **Single-alternative attribute** *(new)* — an attribute the family defines with exactly one
+  option. The configurator **auto-selects** it (the control stays visible and interactive), so a
+  customer never picks a choice that has no alternative. Triggered by the *structural* count only,
+  never by feasibility leaving one option enabled. A sole colour hides its switcher `<nav>` since
+  there is nothing to navigate to. See ADR-0010.
 
 ## Money
 
