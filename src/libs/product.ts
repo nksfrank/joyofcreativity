@@ -106,6 +106,64 @@ const products: ProductDefinition[] = [
       priceModifier: { value: 4900, type: "fixed" },
     },
   },
+  // A family offered in a single colour (white, blank19-21 across S/M/L). Its product
+  // page renders no colour switcher — there is nowhere to switch to (ADR-0010).
+  {
+    id: "2",
+    price: { amount: 69900, currency: "SEK" },
+    blanks: [
+      { blankId: "blank19", priceModifier: { value: 0, type: "fixed" } },
+      { blankId: "blank20", priceModifier: { value: 0, type: "fixed" } },
+      { blankId: "blank21", priceModifier: { value: 0, type: "fixed" } },
+    ],
+    patternVariants: [
+      {
+        pattern: {
+          id: "plain",
+          name: "Plain",
+          description: "A clean knit with no lettering.",
+          priceModifier: { value: 0, type: "fixed" },
+        },
+        compatibleBlankIds: ["blank19", "blank20", "blank21"],
+        allowedYarnCount: 1,
+      },
+      {
+        pattern: {
+          id: "signature",
+          name: "Signature Letter",
+          description: "The signature knit letter motif.",
+          priceModifier: { value: 10000, type: "fixed" },
+        },
+        compatibleBlankIds: ["blank19", "blank20", "blank21"],
+        allowedYarnCount: 3,
+      },
+    ],
+    availableYarnColours: [
+      {
+        id: "ivory",
+        name: "Ivory",
+        available: true,
+        priceModifier: { value: 2000, type: "fixed" },
+      },
+      {
+        id: "charcoal",
+        name: "Charcoal",
+        available: true,
+        priceModifier: { value: 2000, type: "fixed" },
+      },
+      {
+        id: "rose",
+        name: "Rose",
+        available: true,
+        priceModifier: { value: 2000, type: "fixed" },
+      },
+    ],
+    customisation: {
+      allowText: true,
+      maxLength: 12,
+      priceModifier: { value: 4900, type: "fixed" },
+    },
+  },
 ];
 
 const productDetails: ProductDetail[] = [
@@ -130,6 +188,17 @@ const productDetails: ProductDetail[] = [
         "Our signature hand-knit sweater in a festive red, ready for the holidays.",
       slug: "christmas-red-signature-letter-sweater",
       image: "/images/christmas-red-signature-letter-sweater.jpg",
+    },
+  },
+  {
+    id: "3",
+    productId: "2",
+    blankId: "blank19",
+    details: {
+      name: "Snowdrift Sweater",
+      description: "A hand-knit sweater in a single, crisp white.",
+      slug: "snowdrift-sweater",
+      image: "/images/snowdrift-sweater.jpg",
     },
   },
 ];
