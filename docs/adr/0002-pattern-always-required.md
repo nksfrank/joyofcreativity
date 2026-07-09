@@ -20,8 +20,9 @@ configurator forces a pattern choice, and a Product Order Item is never valid wi
 - The fixme journey must gain a pattern-selection step before it can pass.
 - Seed data must give every family at least one pattern (including the Signature Letter Sweater);
   a family that is "just a plain knit" is modelled as a single default pattern, not the absence of one.
-- Yarn-colour count is always governed by a concrete pattern's `allowedYarnCount`, so there is no
-  "no pattern → unbounded yarns" edge case to handle.
+- Yarn-colour count is always governed by a concrete pattern's yarn count, so there is no
+  "no pattern → unbounded yarns" edge case to handle. (That count was `allowedYarnCount`, a max;
+  ADR-0009 later made it `requiredYarnCount`, an exact required count.)
 
 ## Rejected alternative
 

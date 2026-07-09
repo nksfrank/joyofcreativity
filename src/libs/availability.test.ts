@@ -18,7 +18,7 @@ const definition: ProductDefinition = {
         priceModifier: noModifier,
       },
       compatibleBlankIds: ["blank1"],
-      allowedYarnCount: 2,
+      requiredYarnCount: 2,
     },
   ],
   availableYarnColours: [
@@ -36,14 +36,21 @@ const itemWithYarns = (yarnColorIds: string[]): ProductOrderItem => ({
   customisation: "",
 });
 
-describe("patternYarnCountValid", () => {
-  it("allows fewer yarn colors than allowedYarnCount", () => {
-    expect(
-      new AvailabilityManager(definition).isAvailable(itemWithYarns(["yarn1"])),
-    ).toBe(true);
+describe("patternYarnCountValid (exact-count rule)", () => {
+  // "Twin" requires exactly 2 yarn colours.
+  it("rejects fewer than requiredYarnCount yarn colors", () => {
+    const failures = new AvailabilityManager(definition).check(
+      itemWithYarns(["yarn1"]),
+    );
+    expect(failures).toContainEqual(
+      expect.objectContaining({
+        ok: false,
+        reason: "Pattern Twin requires exactly 2 yarn colors",
+      }),
+    );
   });
 
-  it("allows exactly allowedYarnCount yarn colors (inclusive boundary)", () => {
+  it("passes at exactly requiredYarnCount yarn colors", () => {
     expect(
       new AvailabilityManager(definition).isAvailable(
         itemWithYarns(["yarn1", "yarn2"]),
@@ -51,22 +58,32 @@ describe("patternYarnCountValid", () => {
     ).toBe(true);
   });
 
-  it("rejects more than allowedYarnCount yarn colors", () => {
+  it("passes at exactly requiredYarnCount when a colour is repeated", () => {
+    expect(
+      new AvailabilityManager(definition).isAvailable(
+        itemWithYarns(["yarn1", "yarn1"]),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects more than requiredYarnCount yarn colors", () => {
     const failures = new AvailabilityManager(definition).check(
       itemWithYarns(["yarn1", "yarn2", "yarn3"]),
     );
     expect(failures).toContainEqual(
       expect.objectContaining({
         ok: false,
-        reason: "Pattern Twin allows only 2 yarn colors",
+        reason: "Pattern Twin requires exactly 2 yarn colors",
       }),
     );
   });
 });
 
 describe("customisation rules", () => {
+  // Carry exactly requiredYarnCount (2) valid yarns so only the customisation
+  // rule can fail — the exact-count and yarn-availability rules stay satisfied.
   const withCustomisation = (customisation: string): ProductOrderItem => ({
-    ...itemWithYarns([]),
+    ...itemWithYarns(["yarn1", "yarn2"]),
     customisation,
   });
 

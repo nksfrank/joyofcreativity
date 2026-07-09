@@ -34,7 +34,13 @@ type CustomisationRule = {
 export type PatternVariant = {
   pattern: Pattern;
   compatibleBlankIds: string[];
-  allowedYarnCount: number;
+  /**
+   * The exact, required number of yarn colours this pattern takes (ADR-0009).
+   * A valid ProductOrderItem has yarnColorIds.length === requiredYarnCount for
+   * its chosen pattern; 0 is a plain knit with no yarn choice. Duplicates are
+   * permitted and the list is an order-insignificant multiset.
+   */
+  requiredYarnCount: number;
 };
 
 type ProductDetailTexts = {

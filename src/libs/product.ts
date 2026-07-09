@@ -41,7 +41,7 @@ const products: ProductDefinition[] = [
           "blank11",
           "blank12",
         ],
-        allowedYarnCount: 1,
+        requiredYarnCount: 1,
       },
       {
         pattern: {
@@ -64,7 +64,7 @@ const products: ProductDefinition[] = [
           "blank11",
           "blank12",
         ],
-        allowedYarnCount: 3,
+        requiredYarnCount: 3,
       },
     ],
     availableYarnColours: [
@@ -106,6 +106,100 @@ const products: ProductDefinition[] = [
       priceModifier: { value: 4900, type: "fixed" },
     },
   },
+  // A family offered in a single colour (white, blank19-21 across S/M/L). Its product
+  // page renders no colour switcher — there is nowhere to switch to (ADR-0010).
+  {
+    id: "2",
+    price: { amount: 69900, currency: "SEK" },
+    blanks: [
+      { blankId: "blank19", priceModifier: { value: 0, type: "fixed" } },
+      { blankId: "blank20", priceModifier: { value: 0, type: "fixed" } },
+      { blankId: "blank21", priceModifier: { value: 0, type: "fixed" } },
+    ],
+    patternVariants: [
+      {
+        pattern: {
+          id: "plain",
+          name: "Plain",
+          description: "A clean knit with no lettering.",
+          priceModifier: { value: 0, type: "fixed" },
+        },
+        compatibleBlankIds: ["blank19", "blank20", "blank21"],
+        requiredYarnCount: 1,
+      },
+      {
+        pattern: {
+          id: "signature",
+          name: "Signature Letter",
+          description: "The signature knit letter motif.",
+          priceModifier: { value: 10000, type: "fixed" },
+        },
+        compatibleBlankIds: ["blank19", "blank20", "blank21"],
+        requiredYarnCount: 3,
+      },
+    ],
+    availableYarnColours: [
+      {
+        id: "ivory",
+        name: "Ivory",
+        available: true,
+        priceModifier: { value: 2000, type: "fixed" },
+      },
+      {
+        id: "charcoal",
+        name: "Charcoal",
+        available: true,
+        priceModifier: { value: 2000, type: "fixed" },
+      },
+      {
+        id: "rose",
+        name: "Rose",
+        available: true,
+        priceModifier: { value: 2000, type: "fixed" },
+      },
+    ],
+    customisation: {
+      allowText: true,
+      maxLength: 12,
+      priceModifier: { value: 4900, type: "fixed" },
+    },
+  },
+  // A fully single-option family: one colour (black), one size (medium, blank17),
+  // one pattern, and a single available yarn colour. Every required attribute is
+  // structurally single, so the configurator opens priced and add-to-cart-ready
+  // with nothing to pick (ADR-0010 / nksfrank/joyofcreativity#12).
+  {
+    id: "3",
+    price: { amount: 89900, currency: "SEK" },
+    blanks: [
+      { blankId: "blank17", priceModifier: { value: 0, type: "fixed" } },
+    ],
+    patternVariants: [
+      {
+        pattern: {
+          id: "plain",
+          name: "Plain",
+          description: "A clean knit with no lettering.",
+          priceModifier: { value: 0, type: "fixed" },
+        },
+        compatibleBlankIds: ["blank17"],
+        requiredYarnCount: 1,
+      },
+    ],
+    availableYarnColours: [
+      {
+        id: "charcoal",
+        name: "Charcoal",
+        available: true,
+        priceModifier: { value: 2000, type: "fixed" },
+      },
+    ],
+    customisation: {
+      allowText: false,
+      maxLength: 0,
+      priceModifier: { value: 0, type: "fixed" },
+    },
+  },
 ];
 
 const productDetails: ProductDetail[] = [
@@ -130,6 +224,29 @@ const productDetails: ProductDetail[] = [
         "Our signature hand-knit sweater in a festive red, ready for the holidays.",
       slug: "christmas-red-signature-letter-sweater",
       image: "/images/christmas-red-signature-letter-sweater.jpg",
+    },
+  },
+  {
+    id: "3",
+    productId: "2",
+    blankId: "blank19",
+    details: {
+      name: "Snowdrift Sweater",
+      description: "A hand-knit sweater in a single, crisp white.",
+      slug: "snowdrift-sweater",
+      image: "/images/snowdrift-sweater.jpg",
+    },
+  },
+  {
+    id: "4",
+    productId: "3",
+    blankId: "blank17",
+    details: {
+      name: "Midnight Sweater",
+      description:
+        "A single-size hand-knit in midnight black — one colour, one pattern, ready to buy in one tap.",
+      slug: "midnight-sweater",
+      image: "/images/midnight-sweater.jpg",
     },
   },
 ];

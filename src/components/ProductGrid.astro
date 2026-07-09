@@ -1,0 +1,44 @@
+---
+import { getAllProducts, getProductDetailsByProductId } from "@/libs/product";
+import { resolveColourNav } from "@/libs/product.utils";
+
+// Every mock product, each joined with its colour variants. The title links to
+// the product's primary colour page so a product is discoverable by clicking its
+// name — not only a colour swatch — and crawlers reach it without parsing swatches.
+const products = getAllProducts().map((product) => {
+  // "" as the current colour: isCurrent is irrelevant on a listing — we only
+  // need each colour's label + href, and the first variant is the primary page.
+  const variants = resolveColourNav(product.id, "");
+  return {
+    id: product.id,
+    name:
+      getProductDetailsByProductId(product.id).at(0)?.details.name ??
+      product.id,
+    href: variants.at(0)?.href,
+    variants,
+  };
+});
+---
+
+<ul>
+  {
+    products.map((product) => (
+      <li data-testid="product-card">
+        <h2 data-testid="product-card-title">
+          {product.href ? (
+            <a href={product.href}>{product.name}</a>
+          ) : (
+            product.name
+          )}
+        </h2>
+        <ul data-testid="product-card-variants">
+          {product.variants.map((variant) => (
+            <li>
+              <a href={variant.href}>{variant.colourName}</a>
+            </li>
+          ))}
+        </ul>
+      </li>
+    ))
+  }
+</ul>

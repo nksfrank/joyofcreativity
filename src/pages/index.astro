@@ -1,5 +1,6 @@
 ---
 import SiteLayout from "@/components/layouts/SiteLayout.astro";
+import ProductGrid from "@/components/ProductGrid.astro";
 import { m } from "@/i18n/messages";
 ---
 
@@ -8,4 +9,9 @@ import { m } from "@/i18n/messages";
     <h1></h1>
     <p>{m.example_message({ username: "Niklas" })}</p>
   </hgroup>
+
+  <section aria-labelledby="catalogue-heading">
+    <h2 id="catalogue-heading">Our sweaters</h2>
+    <ProductGrid />
+  </section>
 </SiteLayout>

@@ -64,7 +64,7 @@ export const cartCount = (lines: CartLine[]): number =>
 
 /** Running total computed from the line snapshots alone; null for an empty cart. */
 export const cartTotal = (lines: CartLine[]): Price | null => {
-  const first = lines[0];
+  const first = lines.at(0);
   if (!first) {
     return null;
   }

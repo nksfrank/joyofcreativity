@@ -71,16 +71,19 @@ const yarnAvailable: AvailabilityFn = (definition) => (item) => {
   return { ok: true };
 };
 
+// A pattern takes an exact, required number of yarn colours (ADR-0009): the item
+// must carry precisely that many, no fewer and no more. Duplicates count towards
+// the total; each entry is separately checked by yarnAvailable.
 const patternYarnCountValid: AvailabilityFn = (definition) => (item) => {
   const variant = definition.patternVariants.find(
     patternVariant(item.patternId),
   );
   assert(variant, `Pattern with id ${item.patternId} not found`);
 
-  if (item.yarnColorIds.length > variant.allowedYarnCount) {
+  if (item.yarnColorIds.length !== variant.requiredYarnCount) {
     return {
       ok: false,
-      reason: `Pattern ${variant.pattern.name} allows only ${variant.allowedYarnCount} yarn colors`,
+      reason: `Pattern ${variant.pattern.name} requires exactly ${variant.requiredYarnCount} yarn colors`,
     };
   }
 

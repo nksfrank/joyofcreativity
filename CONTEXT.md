@@ -26,9 +26,13 @@ Use these terms verbatim in code, tests, issues, and docs. Avoid the listed syno
 - **Product Order Item** — a *complete, resolved* configuration: `{ blankId, patternId,
   yarnColorIds, customisation }`. The unit the pricing and availability engines evaluate.
 - **Pattern** / **Pattern Variant** — a knit pattern plus the blanks it is `compatibleBlankIds`
-  and the number of yarn colours it permits (`allowedYarnCount`). **Required** on every order item.
-- **Yarn Colour** — a selectable yarn thread colour; how many may be chosen is bounded by the
-  chosen pattern.
+  and the *exact* number of yarn colours it takes (`requiredYarnCount`). **Required** on every
+  order item. A `requiredYarnCount` of 0 is a plain knit with no yarn choice.
+- **Yarn Colour** — a selectable yarn thread colour. The chosen pattern fixes exactly how many are
+  picked (`requiredYarnCount`); the customer fills that many single-choice fields. The same colour
+  **may repeat** across fields and **order is insignificant** — the selection is a *multiset*, so
+  `[red, blue]` and `[blue, red]` are the same product. See ADR-0009. _Not_ "up to N" — it is
+  exactly N.
 - **Customisation** — free text applied to the product, bounded by the family's `CustomisationRule`
   (`allowText`, `maxLength`).
 - **Price Modifier** — a `fixed` (absolute minor-units) or `percentage` adjustment to the family
@@ -47,6 +51,11 @@ Use these terms verbatim in code, tests, issues, and docs. Avoid the listed syno
 - **Configurator** *(new)* — the hydrated island on the product page that renders the Configuration
   Model and drives it as the customer changes selections. Colour is **route-driven** (ADR-0006),
   not island state.
+- **Single-alternative attribute** *(new)* — an attribute the family defines with exactly one
+  option. The configurator **auto-selects** it (the control stays visible and interactive), so a
+  customer never picks a choice that has no alternative. Triggered by the *structural* count only,
+  never by feasibility leaving one option enabled. A sole colour hides its switcher `<nav>` since
+  there is nothing to navigate to. See ADR-0010.
 
 ## Money
 
