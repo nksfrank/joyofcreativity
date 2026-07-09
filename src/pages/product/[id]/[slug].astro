@@ -35,23 +35,28 @@ const locale = getLocale();
     <h1>{page.name}</h1>
     <p>{page.description}</p>
 
-    <nav aria-label="Colour">
-      <ul>
-        {
-          colourNav.map((colour) => (
-            <li>
-              <a
-                href={colour.href}
-                data-testid="colour-option"
-                aria-current={colour.isCurrent ? "true" : undefined}
-              >
-                {colour.colourName}
-              </a>
-            </li>
-          ))
-        }
-      </ul>
-    </nav>
+    <p data-testid="product-colour">Colour: {page.colourName}</p>
+
+    {
+      /* A sole colour has nowhere to switch to, so no switcher renders (ADR-0010). */
+      colourNav.length > 1 && (
+        <nav aria-label="Colour">
+          <ul>
+            {colourNav.map((colour) => (
+              <li>
+                <a
+                  href={colour.href}
+                  data-testid="colour-option"
+                  aria-current={colour.isCurrent ? "true" : undefined}
+                >
+                  {colour.colourName}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )
+    }
 
     <Configurator
       client:load
