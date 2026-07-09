@@ -209,8 +209,8 @@ describe("ConfigurationModel.yarnFields", () => {
     });
     const fields = model.yarnFields();
 
-    expect(fields[0]?.selectedId).toBe("red");
-    expect(fields[1]?.selectedId).toBeUndefined();
+    expect(fields.at(0)?.selectedId).toBe("red");
+    expect(fields.at(1)?.selectedId).toBeUndefined();
   });
 
   it("auto-resolves every field when a single yarn colour is available", () => {

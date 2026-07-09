@@ -326,7 +326,7 @@ export class ConfigurationModel {
     if (required === 0) {
       return [];
     }
-    const yarn = this.availableYarns()[0];
+    const yarn = this.availableYarns().at(0);
     if (yarn === undefined) {
       return null;
     }

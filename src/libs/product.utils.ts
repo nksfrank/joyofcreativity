@@ -71,7 +71,7 @@ export const resolveColourPages = (productId: string): ColourPage[] => {
     return [];
   }
   const details = getProductDetailsByProductId(productId);
-  const base = details[0]?.details;
+  const base = details.at(0)?.details;
 
   const seen = new Set<string>();
   const pages: ColourPage[] = [];
