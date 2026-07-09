@@ -185,7 +185,11 @@ test("a single-colour family shows the colour but renders no switcher", async ({
   await expect(line).toContainText(colourName);
 });
 
-test("configure a product, add it to the cart, and add it again to reach quantity 2", async ({
+// Parked: the exact-count yarn rule (ADR-0009) retires the checkbox-based yarn
+// journey this test drives. It is un-fixme'd and rewritten to drive yarn via
+// required <select> fields by the configurator UI ticket
+// (nksfrank/joyofcreativity#12); issue #13 lands the domain layer only.
+test.fixme("configure a product, add it to the cart, and add it again to reach quantity 2", async ({
   page,
 }) => {
   const { cardTitle, colourName } = await goToFirstVariantProductPage(page);

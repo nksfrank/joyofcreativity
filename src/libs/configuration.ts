@@ -1,9 +1,25 @@
 import { AvailabilityManager } from "./availability";
 import { resolveBlankOptionsByProduct } from "./blank.utils";
 import { type Price, PricingManager } from "./pricing";
-import type { ProductDefinition, ProductOrderItem } from "./product.types";
+import type {
+  PatternVariant,
+  ProductDefinition,
+  ProductOrderItem,
+} from "./product.types";
 
 export type OptionView = { id: string; label: string; disabled: boolean };
+
+/**
+ * One required yarn slot for the chosen pattern (ADR-0009). Every field offers
+ * the same list of available yarn colours; `selectedId` is the field's resolved
+ * value — the customer's explicit pick, or the sole available colour when there
+ * is only one (a single-alternative field auto-resolves).
+ */
+export type YarnField = {
+  index: number;
+  options: OptionView[];
+  selectedId: string | undefined;
+};
 export type Selection = {
   sizeId?: string;
   patternId?: string;
@@ -61,11 +77,15 @@ export class ConfigurationModel {
     }));
   }
 
+  /**
+   * @deprecated Transitional flat toggle-list kept only so the checkbox island
+   * keeps compiling; superseded by {@link yarnFields}. The exact-count rule
+   * (ADR-0009) makes the old "add one and probe" semantics meaningless — the
+   * checkbox UI is replaced by required selector fields in the parent UI ticket
+   * (nksfrank/joyofcreativity#12).
+   */
   yarnOptions(): OptionView[] {
     return this.definition.availableYarnColours.map((yarn) => {
-      // An already-selected yarn is probed with the current set (so it stays
-      // enabled and de-selectable); an unselected one is probed with it added,
-      // so a choice that would exceed the pattern's allowedYarnCount disables.
       const selected = this.selection.yarnColorIds.includes(yarn.id);
       const probe = selected
         ? this.selection.yarnColorIds
@@ -82,8 +102,34 @@ export class ConfigurationModel {
     });
   }
 
+  /**
+   * One option-list per required yarn slot for the chosen pattern (ADR-0009).
+   * Returns no fields when no pattern is selected (the count is unknown) or the
+   * pattern is a plain knit (`requiredYarnCount: 0`). Each field offers every
+   * available yarn colour; a field with a single available colour auto-resolves
+   * to it. Duplicates across fields are allowed and order is insignificant.
+   */
+  yarnFields(): YarnField[] {
+    const variant = this.selectedVariant();
+    if (variant === undefined) {
+      return [];
+    }
+    const available = this.availableYarns();
+    const options: OptionView[] = available.map((yarn) => ({
+      id: yarn.id,
+      label: yarn.name,
+      disabled: false,
+    }));
+    const soleId = available.length === 1 ? available[0]?.id : undefined;
+    return Array.from({ length: variant.requiredYarnCount }, (_, index) => ({
+      index,
+      options,
+      selectedId: this.selection.yarnColorIds[index] ?? soleId,
+    }));
+  }
+
   price(): Price | null {
-    const item = this.currentItem();
+    const item = this.orderItem();
     return item ? this.pricing.calculate(item) : null;
   }
 
@@ -97,12 +143,17 @@ export class ConfigurationModel {
    * downstream selection to clear so the customer is freed rather than stuck.
    */
   deadEnd(): { reset: keyof Selection; reason: string } | null {
-    if (this.hasCompletion(this.selection)) {
+    // Dead-ends are about colour/size/pattern; yarn is left free so the search
+    // completes it (omitting yarnColorIds lets hasCompletion fill the required
+    // count). A pattern needing yarn with none available is already disabled.
+    const { sizeId, patternId, customisation } = this.selection;
+    const base: Partial<Selection> = { sizeId, patternId, customisation };
+    if (this.hasCompletion(base)) {
       return null;
     }
     if (
-      this.selection.patternId !== undefined &&
-      this.hasCompletion({ ...this.selection, patternId: undefined })
+      patternId !== undefined &&
+      this.hasCompletion({ ...base, patternId: undefined })
     ) {
       return {
         reset: "patternId",
@@ -118,10 +169,11 @@ export class ConfigurationModel {
 
   /**
    * The order item described by the current selection, once colour+size resolve
-   * to a blank and a pattern is chosen. Not yet validated — see orderItem().
+   * to a blank, a pattern is chosen, and every required yarn field is filled.
+   * Not yet validated — see orderItem().
    */
   private currentItem(): ProductOrderItem | null {
-    const { sizeId, patternId, yarnColorIds, customisation } = this.selection;
+    const { sizeId, patternId, customisation } = this.selection;
     if (sizeId === undefined || patternId === undefined) {
       return null;
     }
@@ -131,13 +183,53 @@ export class ConfigurationModel {
     if (blankId === undefined) {
       return null;
     }
+    const yarnColorIds = this.resolvedYarnIds();
+    if (yarnColorIds === null) {
+      return null;
+    }
     return { blankId, patternId, yarnColorIds, customisation };
+  }
+
+  private findVariant(patternId: string): PatternVariant | undefined {
+    return this.definition.patternVariants.find(
+      (variant) => variant.pattern.id === patternId,
+    );
+  }
+
+  private selectedVariant(): PatternVariant | undefined {
+    return this.selection.patternId === undefined
+      ? undefined
+      : this.findVariant(this.selection.patternId);
+  }
+
+  private availableYarns() {
+    return this.definition.availableYarnColours.filter(
+      (yarn) => yarn.available,
+    );
+  }
+
+  /**
+   * The resolved yarn colour of every required field, in field order, or null if
+   * any required field is still unfilled (so the item is incomplete).
+   */
+  private resolvedYarnIds(): string[] | null {
+    const ids: string[] = [];
+    for (const field of this.yarnFields()) {
+      if (field.selectedId === undefined) {
+        return null;
+      }
+      ids.push(field.selectedId);
+    }
+    return ids;
   }
 
   /**
    * Full-completion feasibility: is there any valid, in-stock order item that
    * includes the given partial selection? Brute-forces the (tiny) blank × pattern
-   * space, using the trivial yarn/customisation completion unless the caller fixes them.
+   * space. Unless the caller fixes the yarns, each pattern is completed with its
+   * exact required count filled from the available yarns (repetition allowed, so
+   * a single available colour suffices for any N — ADR-0009); a pattern that
+   * needs yarn but has none available has no completion and is infeasible.
    */
   private hasCompletion(selection: Partial<Selection>): boolean {
     const blankIds = resolveBlankOptionsByProduct(this.definition)
@@ -155,10 +247,14 @@ export class ConfigurationModel {
 
     for (const blankId of blankIds) {
       for (const patternId of patternIds) {
+        const yarnColorIds = this.completionYarns(patternId, selection);
+        if (yarnColorIds === null) {
+          continue;
+        }
         const item: ProductOrderItem = {
           blankId,
           patternId,
-          yarnColorIds: selection.yarnColorIds ?? [],
+          yarnColorIds,
           customisation: selection.customisation ?? "",
         };
         if (this.availability.isAvailable(item)) {
@@ -167,5 +263,29 @@ export class ConfigurationModel {
       }
     }
     return false;
+  }
+
+  /**
+   * The yarn ids to try when completing the given pattern. Honours the caller's
+   * fixed yarns when set; otherwise fills the pattern's exact required count from
+   * the available yarns, returning null when the pattern needs yarn but none is
+   * available (no completion exists).
+   */
+  private completionYarns(
+    patternId: string,
+    selection: Partial<Selection>,
+  ): string[] | null {
+    if (selection.yarnColorIds !== undefined) {
+      return selection.yarnColorIds;
+    }
+    const required = this.findVariant(patternId)?.requiredYarnCount ?? 0;
+    if (required === 0) {
+      return [];
+    }
+    const yarn = this.availableYarns()[0];
+    if (yarn === undefined) {
+      return null;
+    }
+    return Array.from({ length: required }, () => yarn.id);
   }
 }
