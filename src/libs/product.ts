@@ -41,7 +41,7 @@ const products: ProductDefinition[] = [
           "blank11",
           "blank12",
         ],
-        allowedYarnCount: 1,
+        requiredYarnCount: 1,
       },
       {
         pattern: {
@@ -64,7 +64,7 @@ const products: ProductDefinition[] = [
           "blank11",
           "blank12",
         ],
-        allowedYarnCount: 3,
+        requiredYarnCount: 3,
       },
     ],
     availableYarnColours: [
@@ -125,7 +125,7 @@ const products: ProductDefinition[] = [
           priceModifier: { value: 0, type: "fixed" },
         },
         compatibleBlankIds: ["blank19", "blank20", "blank21"],
-        allowedYarnCount: 1,
+        requiredYarnCount: 1,
       },
       {
         pattern: {
@@ -135,7 +135,7 @@ const products: ProductDefinition[] = [
           priceModifier: { value: 10000, type: "fixed" },
         },
         compatibleBlankIds: ["blank19", "blank20", "blank21"],
-        allowedYarnCount: 3,
+        requiredYarnCount: 3,
       },
     ],
     availableYarnColours: [

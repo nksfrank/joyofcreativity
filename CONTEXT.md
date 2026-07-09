@@ -26,9 +26,11 @@ Use these terms verbatim in code, tests, issues, and docs. Avoid the listed syno
 - **Product Order Item** — a *complete, resolved* configuration: `{ blankId, patternId,
   yarnColorIds, customisation }`. The unit the pricing and availability engines evaluate.
 - **Pattern** / **Pattern Variant** — a knit pattern plus the blanks it is `compatibleBlankIds`
-  and the number of yarn colours it permits (`allowedYarnCount`). **Required** on every order item.
-- **Yarn Colour** — a selectable yarn thread colour; how many may be chosen is bounded by the
-  chosen pattern.
+  and the exact number of yarn colours it takes (`requiredYarnCount`, see ADR-0009). **Required**
+  on every order item.
+- **Yarn Colour** — a selectable yarn thread colour. A pattern takes exactly `requiredYarnCount`
+  of them as an order-insignificant multiset (duplicates allowed, no per-field roles — ADR-0009);
+  `requiredYarnCount: 0` is a plain knit with no yarn choice.
 - **Customisation** — free text applied to the product, bounded by the family's `CustomisationRule`
   (`allowText`, `maxLength`).
 - **Price Modifier** — a `fixed` (absolute minor-units) or `percentage` adjustment to the family
