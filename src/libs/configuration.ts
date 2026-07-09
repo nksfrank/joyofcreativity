@@ -59,6 +59,25 @@ export class ConfigurationModel {
     });
   }
 
+  /**
+   * The initial selection the configurator opens with: every *structurally
+   * single* required attribute (the family defines exactly one option) is
+   * pre-filled, so a fully single-option product prices immediately on load
+   * (ADR-0010). The trigger is the structural option count alone — never "one
+   * option left enabled after feasibility disabled the rest", so a real choice
+   * is never auto-decided. Yarn needs no entry here: a single-available yarn
+   * field auto-resolves in {@link yarnFields}. The island seeds its state from
+   * this once and never re-derives defaults itself (ADR-0005).
+   */
+  defaultSelection(): Selection {
+    return {
+      sizeId: this.soleStructuralSize(),
+      patternId: this.soleStructuralPattern(),
+      yarnColorIds: [],
+      customisation: "",
+    };
+  }
+
   sizeOptions(): OptionView[] {
     return resolveBlankOptionsByProduct(this.definition)
       .filter((option) => option.color.id === this.colorId)
@@ -75,31 +94,6 @@ export class ConfigurationModel {
       label: variant.pattern.name,
       disabled: !this.hasCompletion({ patternId: variant.pattern.id }),
     }));
-  }
-
-  /**
-   * @deprecated Transitional flat toggle-list kept only so the checkbox island
-   * keeps compiling; superseded by {@link yarnFields}. The exact-count rule
-   * (ADR-0009) makes the old "add one and probe" semantics meaningless — the
-   * checkbox UI is replaced by required selector fields in the parent UI ticket
-   * (nksfrank/joyofcreativity#12).
-   */
-  yarnOptions(): OptionView[] {
-    return this.definition.availableYarnColours.map((yarn) => {
-      const selected = this.selection.yarnColorIds.includes(yarn.id);
-      const probe = selected
-        ? this.selection.yarnColorIds
-        : [...this.selection.yarnColorIds, yarn.id];
-      return {
-        id: yarn.id,
-        label: yarn.name,
-        disabled: !this.hasCompletion({
-          sizeId: this.selection.sizeId,
-          patternId: this.selection.patternId,
-          yarnColorIds: probe,
-        }),
-      };
-    });
   }
 
   /**
@@ -206,6 +200,27 @@ export class ConfigurationModel {
     return this.definition.availableYarnColours.filter(
       (yarn) => yarn.available,
     );
+  }
+
+  /**
+   * The sole size this colour is offered in, or undefined when the family
+   * structurally offers more than one — regardless of stock, so a size that is
+   * merely out of stock never collapses a real choice into an auto-select.
+   */
+  private soleStructuralSize(): string | undefined {
+    const sizeIds = new Set(
+      resolveBlankOptionsByProduct(this.definition)
+        .filter((option) => option.color.id === this.colorId)
+        .map((option) => option.size.id),
+    );
+    return sizeIds.size === 1 ? [...sizeIds][0] : undefined;
+  }
+
+  /** The sole pattern the family offers, or undefined when it offers more than one. */
+  private soleStructuralPattern(): string | undefined {
+    return this.definition.patternVariants.length === 1
+      ? this.definition.patternVariants[0]?.pattern.id
+      : undefined;
   }
 
   /**

@@ -31,6 +31,11 @@ Use these terms verbatim in code, tests, issues, and docs. Avoid the listed syno
 - **Yarn Colour** — a selectable yarn thread colour. A pattern takes exactly `requiredYarnCount`
   of them as an order-insignificant multiset (duplicates allowed, no per-field roles — ADR-0009);
   `requiredYarnCount: 0` is a plain knit with no yarn choice.
+- **Single-alternative attribute** — a required attribute the family defines exactly *one* option
+  for (one size for a colour, one pattern, one colour, or a yarn field with one available colour).
+  The configurator pre-fills it so the customer never picks a choice that has no alternative; the
+  trigger is the **structural** option count, never "one option left enabled after feasibility
+  disabled the rest" (ADR-0010). A sole colour hides its switcher entirely (ADR-0006/0010).
 - **Customisation** — free text applied to the product, bounded by the family's `CustomisationRule`
   (`allowText`, `maxLength`).
 - **Price Modifier** — a `fixed` (absolute minor-units) or `percentage` adjustment to the family
