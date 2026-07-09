@@ -73,6 +73,63 @@ const bareDefinition: ProductDefinition = {
   patternVariants: [plain(0)],
 };
 
+/** definition offered in cream in a single size (blank1, small), all else shared. */
+const singleSizeDefinition: ProductDefinition = {
+  ...definition,
+  blanks: [{ blankId: "blank1", priceModifier: noModifier }],
+};
+
+/** definition offering a single pattern (and cream small only), so both auto-select. */
+const soloDefinition: ProductDefinition = {
+  ...definition,
+  blanks: [{ blankId: "blank1", priceModifier: noModifier }],
+  patternVariants: [plain(2)],
+};
+
+describe("ConfigurationModel.defaultSelection", () => {
+  it("pre-selects the sole size a colour is offered in", () => {
+    const model = new ConfigurationModel(singleSizeDefinition, "cream");
+
+    expect(model.defaultSelection().sizeId).toBe("small");
+  });
+
+  it("pre-selects the sole pattern the family offers", () => {
+    const model = new ConfigurationModel(bareDefinition, "cream");
+
+    expect(model.defaultSelection().patternId).toBe("plain");
+  });
+
+  it("pre-selects both size and pattern for a single-option family", () => {
+    const selection = new ConfigurationModel(
+      soloDefinition,
+      "cream",
+    ).defaultSelection();
+
+    expect(selection.sizeId).toBe("small");
+    expect(selection.patternId).toBe("plain");
+  });
+
+  it("does not auto-select a size when more than one is offered, even if only one is in stock", () => {
+    // cream offers small (stock 5) and large (stock 0): a real choice exists
+    // structurally, so no size is auto-decided just because large is sold out.
+    const model = new ConfigurationModel(definition, "cream");
+
+    expect(model.defaultSelection().sizeId).toBeUndefined();
+  });
+
+  it("does not auto-select a pattern when the family offers more than one", () => {
+    const model = new ConfigurationModel(definition, "cream");
+
+    expect(model.defaultSelection().patternId).toBeUndefined();
+  });
+
+  it("leaves yarn empty; single-available yarn fields auto-resolve in yarnFields", () => {
+    const model = new ConfigurationModel(soloDefinition, "cream");
+
+    expect(model.defaultSelection().yarnColorIds).toEqual([]);
+  });
+});
+
 describe("ConfigurationModel.sizeOptions", () => {
   it("disables a size whose blank is out of stock", () => {
     const model = new ConfigurationModel(definition, "cream");
@@ -152,8 +209,8 @@ describe("ConfigurationModel.yarnFields", () => {
     });
     const fields = model.yarnFields();
 
-    expect(fields[0]?.selectedId).toBe("red");
-    expect(fields[1]?.selectedId).toBeUndefined();
+    expect(fields.at(0)?.selectedId).toBe("red");
+    expect(fields.at(1)?.selectedId).toBeUndefined();
   });
 
   it("auto-resolves every field when a single yarn colour is available", () => {

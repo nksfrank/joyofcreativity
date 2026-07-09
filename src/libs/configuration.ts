@@ -59,14 +59,31 @@ export class ConfigurationModel {
     });
   }
 
+  /**
+   * The initial selection the configurator opens with: every *structurally
+   * single* required attribute (the family defines exactly one option) is
+   * pre-filled, so a fully single-option product prices immediately on load
+   * (ADR-0010). The trigger is the structural option count alone — never "one
+   * option left enabled after feasibility disabled the rest", so a real choice
+   * is never auto-decided. Yarn needs no entry here: a single-available yarn
+   * field auto-resolves in {@link yarnFields}. The island seeds its state from
+   * this once and never re-derives defaults itself (ADR-0005).
+   */
+  defaultSelection(): Selection {
+    return {
+      sizeId: this.soleStructuralSize(),
+      patternId: this.soleStructuralPattern(),
+      yarnColorIds: [],
+      customisation: "",
+    };
+  }
+
   sizeOptions(): OptionView[] {
-    return resolveBlankOptionsByProduct(this.definition)
-      .filter((option) => option.color.id === this.colorId)
-      .map((option) => ({
-        id: option.size.id,
-        label: option.size.name,
-        disabled: option.stock <= 0,
-      }));
+    return this.blanksForColour().map((option) => ({
+      id: option.size.id,
+      label: option.size.name,
+      disabled: option.stock <= 0,
+    }));
   }
 
   patternOptions(): OptionView[] {
@@ -75,31 +92,6 @@ export class ConfigurationModel {
       label: variant.pattern.name,
       disabled: !this.hasCompletion({ patternId: variant.pattern.id }),
     }));
-  }
-
-  /**
-   * @deprecated Transitional flat toggle-list kept only so the checkbox island
-   * keeps compiling; superseded by {@link yarnFields}. The exact-count rule
-   * (ADR-0009) makes the old "add one and probe" semantics meaningless — the
-   * checkbox UI is replaced by required selector fields in the parent UI ticket
-   * (nksfrank/joyofcreativity#12).
-   */
-  yarnOptions(): OptionView[] {
-    return this.definition.availableYarnColours.map((yarn) => {
-      const selected = this.selection.yarnColorIds.includes(yarn.id);
-      const probe = selected
-        ? this.selection.yarnColorIds
-        : [...this.selection.yarnColorIds, yarn.id];
-      return {
-        id: yarn.id,
-        label: yarn.name,
-        disabled: !this.hasCompletion({
-          sizeId: this.selection.sizeId,
-          patternId: this.selection.patternId,
-          yarnColorIds: probe,
-        }),
-      };
-    });
   }
 
   /**
@@ -120,11 +112,11 @@ export class ConfigurationModel {
       label: yarn.name,
       disabled: false,
     }));
-    const soleId = available.length === 1 ? available[0]?.id : undefined;
+    const soleId = available.length === 1 ? available.at(0)?.id : undefined;
     return Array.from({ length: variant.requiredYarnCount }, (_, index) => ({
       index,
       options,
-      selectedId: this.selection.yarnColorIds[index] ?? soleId,
+      selectedId: this.selection.yarnColorIds.at(index) ?? soleId,
     }));
   }
 
@@ -136,6 +128,33 @@ export class ConfigurationModel {
   orderItem(): ProductOrderItem | null {
     const item = this.currentItem();
     return item && this.availability.isAvailable(item) ? item : null;
+  }
+
+  /**
+   * Human-readable labels for the current order item's domain choices, or null
+   * when the selection is incomplete. Colour and product name are route-/prop-
+   * level concerns the island owns; every domain-resolved label comes from here
+   * so the island never reads the ProductDefinition directly (ADR-0005).
+   */
+  orderItemLabels(): {
+    size: string;
+    pattern: string;
+    yarnColours: string[];
+  } | null {
+    const item = this.orderItem();
+    if (item === null) {
+      return null;
+    }
+    const size =
+      this.blanksForColour().find((option) => option.blankId === item.blankId)
+        ?.size.name ?? "";
+    const pattern = this.findVariant(item.patternId)?.pattern.name ?? "";
+    const yarnColours = item.yarnColorIds.map(
+      (id) =>
+        this.definition.availableYarnColours.find((yarn) => yarn.id === id)
+          ?.name ?? "",
+    );
+    return { size, pattern, yarnColours };
   }
 
   /**
@@ -177,8 +196,8 @@ export class ConfigurationModel {
     if (sizeId === undefined || patternId === undefined) {
       return null;
     }
-    const blankId = resolveBlankOptionsByProduct(this.definition).find(
-      (option) => option.color.id === this.colorId && option.size.id === sizeId,
+    const blankId = this.blanksForColour().find(
+      (option) => option.size.id === sizeId,
     )?.blankId;
     if (blankId === undefined) {
       return null;
@@ -209,6 +228,32 @@ export class ConfigurationModel {
   }
 
   /**
+   * The sole size this colour is offered in, or undefined when the family
+   * structurally offers more than one — regardless of stock, so a size that is
+   * merely out of stock never collapses a real choice into an auto-select.
+   */
+  private soleStructuralSize(): string | undefined {
+    const sizeIds = new Set(
+      this.blanksForColour().map((option) => option.size.id),
+    );
+    return sizeIds.size === 1 ? [...sizeIds].at(0) : undefined;
+  }
+
+  /** The sole pattern the family offers, or undefined when it offers more than one. */
+  private soleStructuralPattern(): string | undefined {
+    return this.definition.patternVariants.length === 1
+      ? this.definition.patternVariants.at(0)?.pattern.id
+      : undefined;
+  }
+
+  /** Every blank this colour is offered in, across all sizes (stock included). */
+  private blanksForColour() {
+    return resolveBlankOptionsByProduct(this.definition).filter(
+      (option) => option.color.id === this.colorId,
+    );
+  }
+
+  /**
    * The resolved yarn colour of every required field, in field order, or null if
    * any required field is still unfilled (so the item is incomplete).
    */
@@ -232,8 +277,7 @@ export class ConfigurationModel {
    * needs yarn but has none available has no completion and is infeasible.
    */
   private hasCompletion(selection: Partial<Selection>): boolean {
-    const blankIds = resolveBlankOptionsByProduct(this.definition)
-      .filter((option) => option.color.id === this.colorId)
+    const blankIds = this.blanksForColour()
       .filter(
         (option) =>
           selection.sizeId === undefined || option.size.id === selection.sizeId,
@@ -282,7 +326,7 @@ export class ConfigurationModel {
     if (required === 0) {
       return [];
     }
-    const yarn = this.availableYarns()[0];
+    const yarn = this.availableYarns().at(0);
     if (yarn === undefined) {
       return null;
     }

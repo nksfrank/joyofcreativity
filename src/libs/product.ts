@@ -164,6 +164,42 @@ const products: ProductDefinition[] = [
       priceModifier: { value: 4900, type: "fixed" },
     },
   },
+  // A fully single-option family: one colour (black), one size (medium, blank17),
+  // one pattern, and a single available yarn colour. Every required attribute is
+  // structurally single, so the configurator opens priced and add-to-cart-ready
+  // with nothing to pick (ADR-0010 / nksfrank/joyofcreativity#12).
+  {
+    id: "3",
+    price: { amount: 89900, currency: "SEK" },
+    blanks: [
+      { blankId: "blank17", priceModifier: { value: 0, type: "fixed" } },
+    ],
+    patternVariants: [
+      {
+        pattern: {
+          id: "plain",
+          name: "Plain",
+          description: "A clean knit with no lettering.",
+          priceModifier: { value: 0, type: "fixed" },
+        },
+        compatibleBlankIds: ["blank17"],
+        requiredYarnCount: 1,
+      },
+    ],
+    availableYarnColours: [
+      {
+        id: "charcoal",
+        name: "Charcoal",
+        available: true,
+        priceModifier: { value: 2000, type: "fixed" },
+      },
+    ],
+    customisation: {
+      allowText: false,
+      maxLength: 0,
+      priceModifier: { value: 0, type: "fixed" },
+    },
+  },
 ];
 
 const productDetails: ProductDetail[] = [
@@ -199,6 +235,18 @@ const productDetails: ProductDetail[] = [
       description: "A hand-knit sweater in a single, crisp white.",
       slug: "snowdrift-sweater",
       image: "/images/snowdrift-sweater.jpg",
+    },
+  },
+  {
+    id: "4",
+    productId: "3",
+    blankId: "blank17",
+    details: {
+      name: "Midnight Sweater",
+      description:
+        "A single-size hand-knit in midnight black — one colour, one pattern, ready to buy in one tap.",
+      slug: "midnight-sweater",
+      image: "/images/midnight-sweater.jpg",
     },
   },
 ];

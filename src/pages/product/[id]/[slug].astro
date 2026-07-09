@@ -25,7 +25,7 @@ assert(product, `Product ${page.productId} not found`);
 
 const colourNav = resolveColourNav(page.productId, page.colorId);
 const productName =
-  getProductDetailsByProductId(page.productId)[0]?.details.name ?? page.name;
+  getProductDetailsByProductId(page.productId).at(0)?.details.name ?? page.name;
 const locale = getLocale();
 ---
 

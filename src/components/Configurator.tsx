@@ -17,13 +17,6 @@ type Props = {
   locale: Locale;
 };
 
-const emptySelection: Selection = {
-  sizeId: undefined,
-  patternId: undefined,
-  yarnColorIds: [],
-  customisation: "",
-};
-
 function RadioGroup({
   legend,
   name,
@@ -64,7 +57,13 @@ export default function Configurator({
   productName,
   locale,
 }: Props) {
-  const [selection, setSelection] = useState<Selection>(emptySelection);
+  // The model owns the initial selection: a structurally-single size/pattern is
+  // pre-filled so a fully single-option product prices on load (ADR-0010). The
+  // island never derives defaults itself, and the lazy initializer runs once so
+  // an auto-selected option stays fixed for the session.
+  const [selection, setSelection] = useState<Selection>(() =>
+    new ConfigurationModel(definition, colorId).defaultSelection(),
+  );
 
   const model = useMemo(
     () => new ConfigurationModel(definition, colorId, selection),
@@ -73,22 +72,24 @@ export default function Configurator({
 
   const sizeOptions = model.sizeOptions();
   const patternOptions = model.patternOptions();
-  const yarnOptions = model.yarnOptions();
+  const yarnFields = model.yarnFields();
   const price = model.price();
   const orderItem = model.orderItem();
+  const labels = model.orderItemLabels();
   const deadEnd = model.deadEnd();
   const rule = definition.customisation;
 
   const update = (partial: Partial<Selection>) =>
     setSelection((prev) => ({ ...prev, ...partial }));
 
-  const toggleYarn = (id: string) =>
-    setSelection((prev) => ({
-      ...prev,
-      yarnColorIds: prev.yarnColorIds.includes(id)
-        ? prev.yarnColorIds.filter((y) => y !== id)
-        : [...prev.yarnColorIds, id],
-    }));
+  // Yarn is one required select per field (ADR-0009); writing a field's pick by
+  // index keeps duplicates across fields and leaves other fields untouched.
+  const selectYarn = (index: number, id: string) =>
+    setSelection((prev) => {
+      const yarnColorIds = [...prev.yarnColorIds];
+      yarnColorIds[index] = id;
+      return { ...prev, yarnColorIds };
+    });
 
   const resetDeadEnd = () => {
     if (deadEnd) {
@@ -97,12 +98,12 @@ export default function Configurator({
   };
 
   const addToCart = () => {
-    // orderItem is non-null only when the selection prices, so price is set here.
-    if (!orderItem || !price) {
+    // orderItem is non-null only when the selection prices; labels resolve on the
+    // same condition. The model owns every domain label (ADR-0005); the island
+    // only adds the route-/prop-level colour and product name.
+    if (!orderItem || !price || !labels) {
       return;
     }
-    const label = (options: OptionView[], id: string | undefined) =>
-      options.find((option) => option.id === id)?.label ?? "";
     addLine({
       productId: definition.id,
       item: orderItem,
@@ -110,9 +111,9 @@ export default function Configurator({
       display: {
         productName,
         colour: colourName,
-        size: label(sizeOptions, selection.sizeId),
-        pattern: label(patternOptions, selection.patternId),
-        yarnColours: selection.yarnColorIds.map((id) => label(yarnOptions, id)),
+        size: labels.size,
+        pattern: labels.pattern,
+        yarnColours: labels.yarnColours,
         customisation: selection.customisation,
       },
     });
@@ -136,22 +137,30 @@ export default function Configurator({
         onSelect={(id) => update({ patternId: id })}
       />
 
-      <fieldset>
-        <legend>Yarn Colours</legend>
-        {yarnOptions.map((option) => (
-          <label key={option.id}>
-            <input
-              type="checkbox"
-              name="yarn"
-              value={option.id}
-              disabled={option.disabled}
-              checked={selection.yarnColorIds.includes(option.id)}
-              onChange={() => toggleYarn(option.id)}
-            />
-            {option.label}
-          </label>
-        ))}
-      </fieldset>
+      {yarnFields.length > 0 && (
+        <fieldset>
+          <legend>Yarn Colours</legend>
+          {yarnFields.map((field) => (
+            <label key={field.index}>
+              Yarn colour {field.index + 1}
+              <select
+                name={`yarn-${field.index}`}
+                value={field.selectedId ?? ""}
+                onChange={(event) =>
+                  selectYarn(field.index, event.currentTarget.value)
+                }
+              >
+                <option value="">Select a colour</option>
+                {field.options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </fieldset>
+      )}
 
       {rule.allowText && (
         <p>
