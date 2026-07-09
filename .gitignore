@@ -2,6 +2,8 @@
 dist/
 # generated types
 .astro/
+# generated i18n (paraglide compile output)
+src/i18n/
 
 # dependencies
 node_modules/
