@@ -75,6 +75,7 @@ export default function Configurator({
   const yarnFields = model.yarnFields();
   const price = model.price();
   const orderItem = model.orderItem();
+  const labels = model.orderItemLabels();
   const deadEnd = model.deadEnd();
   const rule = definition.customisation;
 
@@ -96,16 +97,13 @@ export default function Configurator({
     }
   };
 
-  const yarnLabel = (id: string) =>
-    definition.availableYarnColours.find((yarn) => yarn.id === id)?.name ?? "";
-
   const addToCart = () => {
-    // orderItem is non-null only when the selection prices, so price is set here.
-    if (!orderItem || !price) {
+    // orderItem is non-null only when the selection prices; labels resolve on the
+    // same condition. The model owns every domain label (ADR-0005); the island
+    // only adds the route-/prop-level colour and product name.
+    if (!orderItem || !price || !labels) {
       return;
     }
-    const label = (options: OptionView[], id: string | undefined) =>
-      options.find((option) => option.id === id)?.label ?? "";
     addLine({
       productId: definition.id,
       item: orderItem,
@@ -113,10 +111,9 @@ export default function Configurator({
       display: {
         productName,
         colour: colourName,
-        size: label(sizeOptions, selection.sizeId),
-        pattern: label(patternOptions, selection.patternId),
-        // Resolved item ids, so auto-resolved and duplicated fields are honoured.
-        yarnColours: orderItem.yarnColorIds.map(yarnLabel),
+        size: labels.size,
+        pattern: labels.pattern,
+        yarnColours: labels.yarnColours,
         customisation: selection.customisation,
       },
     });

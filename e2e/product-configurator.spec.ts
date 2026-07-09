@@ -64,6 +64,32 @@ async function chooseYarns(page: Page): Promise<string[]> {
   return chosen;
 }
 
+/** The available yarn option values of a field, excluding the empty placeholder. */
+async function availableYarnValues(page: Page): Promise<string[]> {
+  const options = page
+    .getByRole("group", { name: "Yarn Colours" })
+    .getByRole("combobox")
+    .first()
+    .getByRole("option");
+  const count = await options.count();
+  const values: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const value = await options.nth(i).getAttribute("value");
+    if (value) values.push(value);
+  }
+  return values;
+}
+
+/** Sets each required yarn field (by index) to the given option value. */
+async function fillYarnFields(page: Page, values: string[]): Promise<void> {
+  const selects = page
+    .getByRole("group", { name: "Yarn Colours" })
+    .getByRole("combobox");
+  for (const [index, value] of values.entries()) {
+    await selectHydrated(selects.nth(index), value);
+  }
+}
+
 /** Browses from the start page to the Sweaters listing and returns its product cards. */
 async function openSweatersListing(page: Page): Promise<Locator> {
   await page.goto("/");
@@ -287,4 +313,62 @@ test("a fully single-option product is priced and add-to-cart-ready on load", as
   await expect(line).toContainText("Medium");
   await expect(line).toContainText("Plain");
   await expect(line).toContainText("Charcoal");
+});
+
+test("yarn is an order-insensitive multiset: reorder merges, different multiset splits", async ({
+  page,
+}) => {
+  await goToFirstVariantProductPage(page);
+  const productUrl = page.url();
+
+  // Signature Letter needs three yarn colours — enough fields to reorder and to
+  // duplicate — and stays a fixed size+pattern across adds so only the yarn
+  // multiset varies.
+  const selectSizeAndSignature = async () => {
+    const sizeRadio = await firstEnabledOption(
+      page.getByRole("group", { name: "Size" }).getByRole("radio"),
+    );
+    if (!sizeRadio) throw new Error("Expected an enabled size option");
+    await checkHydrated(sizeRadio);
+    await checkHydrated(
+      page
+        .getByRole("group", { name: "Pattern" })
+        .getByRole("radio", { name: "Signature Letter" }),
+    );
+  };
+
+  const addYarn = async (values: string[]) => {
+    await fillYarnFields(page, values);
+    const addButton = page.getByRole("button", { name: "Add to cart" });
+    await expect(addButton).toBeEnabled();
+    await addButton.click();
+  };
+
+  const reconfigure = async (values: string[]) => {
+    await page.goto(productUrl);
+    await page.waitForLoadState("networkidle");
+    await selectSizeAndSignature();
+    await addYarn(values);
+  };
+
+  await selectSizeAndSignature();
+  const [a, b] = await availableYarnValues(page);
+  if (!a || !b) throw new Error("Expected at least two available yarn colours");
+
+  // Multiset {a, a, b}, then the same multiset in a different field order.
+  await addYarn([a, b, a]);
+  await reconfigure([b, a, a]);
+
+  await page.getByTestId("cart-link").click();
+  await expect(page.getByRole("heading", { name: "Cart" })).toBeVisible();
+  let lines = page.getByTestId("cart-line-item");
+  await expect(lines).toHaveCount(1);
+  await expect(lines.getByTestId("cart-line-item-quantity")).toHaveText("2");
+
+  // A genuinely different multiset {a, a, a} is a distinct line.
+  await reconfigure([a, a, a]);
+  await page.getByTestId("cart-link").click();
+  await expect(page.getByRole("heading", { name: "Cart" })).toBeVisible();
+  lines = page.getByTestId("cart-line-item");
+  await expect(lines).toHaveCount(2);
 });

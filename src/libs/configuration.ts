@@ -79,13 +79,11 @@ export class ConfigurationModel {
   }
 
   sizeOptions(): OptionView[] {
-    return resolveBlankOptionsByProduct(this.definition)
-      .filter((option) => option.color.id === this.colorId)
-      .map((option) => ({
-        id: option.size.id,
-        label: option.size.name,
-        disabled: option.stock <= 0,
-      }));
+    return this.blanksForColour().map((option) => ({
+      id: option.size.id,
+      label: option.size.name,
+      disabled: option.stock <= 0,
+    }));
   }
 
   patternOptions(): OptionView[] {
@@ -114,11 +112,11 @@ export class ConfigurationModel {
       label: yarn.name,
       disabled: false,
     }));
-    const soleId = available.length === 1 ? available[0]?.id : undefined;
+    const soleId = available.length === 1 ? available.at(0)?.id : undefined;
     return Array.from({ length: variant.requiredYarnCount }, (_, index) => ({
       index,
       options,
-      selectedId: this.selection.yarnColorIds[index] ?? soleId,
+      selectedId: this.selection.yarnColorIds.at(index) ?? soleId,
     }));
   }
 
@@ -130,6 +128,33 @@ export class ConfigurationModel {
   orderItem(): ProductOrderItem | null {
     const item = this.currentItem();
     return item && this.availability.isAvailable(item) ? item : null;
+  }
+
+  /**
+   * Human-readable labels for the current order item's domain choices, or null
+   * when the selection is incomplete. Colour and product name are route-/prop-
+   * level concerns the island owns; every domain-resolved label comes from here
+   * so the island never reads the ProductDefinition directly (ADR-0005).
+   */
+  orderItemLabels(): {
+    size: string;
+    pattern: string;
+    yarnColours: string[];
+  } | null {
+    const item = this.orderItem();
+    if (item === null) {
+      return null;
+    }
+    const size =
+      this.blanksForColour().find((option) => option.blankId === item.blankId)
+        ?.size.name ?? "";
+    const pattern = this.findVariant(item.patternId)?.pattern.name ?? "";
+    const yarnColours = item.yarnColorIds.map(
+      (id) =>
+        this.definition.availableYarnColours.find((yarn) => yarn.id === id)
+          ?.name ?? "",
+    );
+    return { size, pattern, yarnColours };
   }
 
   /**
@@ -171,8 +196,8 @@ export class ConfigurationModel {
     if (sizeId === undefined || patternId === undefined) {
       return null;
     }
-    const blankId = resolveBlankOptionsByProduct(this.definition).find(
-      (option) => option.color.id === this.colorId && option.size.id === sizeId,
+    const blankId = this.blanksForColour().find(
+      (option) => option.size.id === sizeId,
     )?.blankId;
     if (blankId === undefined) {
       return null;
@@ -209,18 +234,23 @@ export class ConfigurationModel {
    */
   private soleStructuralSize(): string | undefined {
     const sizeIds = new Set(
-      resolveBlankOptionsByProduct(this.definition)
-        .filter((option) => option.color.id === this.colorId)
-        .map((option) => option.size.id),
+      this.blanksForColour().map((option) => option.size.id),
     );
-    return sizeIds.size === 1 ? [...sizeIds][0] : undefined;
+    return sizeIds.size === 1 ? [...sizeIds].at(0) : undefined;
   }
 
   /** The sole pattern the family offers, or undefined when it offers more than one. */
   private soleStructuralPattern(): string | undefined {
     return this.definition.patternVariants.length === 1
-      ? this.definition.patternVariants[0]?.pattern.id
+      ? this.definition.patternVariants.at(0)?.pattern.id
       : undefined;
+  }
+
+  /** Every blank this colour is offered in, across all sizes (stock included). */
+  private blanksForColour() {
+    return resolveBlankOptionsByProduct(this.definition).filter(
+      (option) => option.color.id === this.colorId,
+    );
   }
 
   /**
@@ -247,8 +277,7 @@ export class ConfigurationModel {
    * needs yarn but has none available has no completion and is infeasible.
    */
   private hasCompletion(selection: Partial<Selection>): boolean {
-    const blankIds = resolveBlankOptionsByProduct(this.definition)
-      .filter((option) => option.color.id === this.colorId)
+    const blankIds = this.blanksForColour()
       .filter(
         (option) =>
           selection.sizeId === undefined || option.size.id === selection.sizeId,

@@ -5,6 +5,9 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
+    // Index access (arr[i]) yields `T | undefined`, so a missing element can't be
+    // silently treated as present. Prefer `arr.at(i)` for reads.
+    "noUncheckedIndexedAccess": true,
     "paths": {
       "@/*": ["./src/*"]
     },

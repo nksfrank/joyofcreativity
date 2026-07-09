@@ -6,12 +6,15 @@ import { resolveColourNav } from "@/libs/product.utils";
 // the product's primary colour page so a product is discoverable by clicking its
 // name — not only a colour swatch — and crawlers reach it without parsing swatches.
 const products = getAllProducts().map((product) => {
+  // "" as the current colour: isCurrent is irrelevant on a listing — we only
+  // need each colour's label + href, and the first variant is the primary page.
   const variants = resolveColourNav(product.id, "");
   return {
     id: product.id,
     name:
-      getProductDetailsByProductId(product.id)[0]?.details.name ?? product.id,
-    href: variants[0]?.href,
+      getProductDetailsByProductId(product.id).at(0)?.details.name ??
+      product.id,
+    href: variants.at(0)?.href,
     variants,
   };
 });

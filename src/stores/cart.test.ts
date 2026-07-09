@@ -32,27 +32,27 @@ describe("mergeLine", () => {
   it("adds a first line with quantity 1", () => {
     const lines = mergeLine([], baseInput);
     expect(lines).toHaveLength(1);
-    expect(lines[0].quantity).toBe(1);
+    expect(lines.at(0)?.quantity).toBe(1);
   });
 
   it("stores price and display as passed (snapshot, not recomputed)", () => {
-    const [line] = mergeLine([], baseInput);
-    expect(line.price).toEqual(baseInput.price);
-    expect(line.display).toEqual(baseInput.display);
-    expect(line.item).toEqual(baseInput.item);
+    const line = mergeLine([], baseInput).at(0);
+    expect(line?.price).toEqual(baseInput.price);
+    expect(line?.display).toEqual(baseInput.display);
+    expect(line?.item).toEqual(baseInput.item);
   });
 
   it("increments quantity for an identical configuration", () => {
     const lines = mergeLine(mergeLine([], baseInput), baseInput);
     expect(lines).toHaveLength(1);
-    expect(lines[0].quantity).toBe(2);
+    expect(lines.at(0)?.quantity).toBe(2);
   });
 
   it("treats yarn colour order as insensitive when merging", () => {
     const reordered = input({ yarnColorIds: ["rose", "ivory"] });
     const lines = mergeLine(mergeLine([], baseInput), reordered);
     expect(lines).toHaveLength(1);
-    expect(lines[0].quantity).toBe(2);
+    expect(lines.at(0)?.quantity).toBe(2);
   });
 
   it("adds a separate line for a differing blank", () => {
