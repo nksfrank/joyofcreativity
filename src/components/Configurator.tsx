@@ -1,4 +1,4 @@
-import { useMemo, useState } from "preact/hooks";
+import { useState } from "preact/hooks";
 import type { Locale } from "@/i18n/runtime";
 import {
   ConfigurationModel,
@@ -65,10 +65,10 @@ export default function Configurator({
     ConfigurationModel.defaultSelection(definition, colorId),
   );
 
-  const model = useMemo(
-    () => new ConfigurationModel(definition, colorId, selection),
-    [definition, colorId, selection],
-  );
+  // The model is a pure projection of (definition, colorId, selection) — a
+  // derived value, not state. Construction is cheap and its identity is never a
+  // hook/child dependency, so it's built inline each render rather than memoised.
+  const model = new ConfigurationModel(definition, colorId, selection);
 
   const sizeOptions = model.sizeOptions();
   const patternOptions = model.patternOptions();
