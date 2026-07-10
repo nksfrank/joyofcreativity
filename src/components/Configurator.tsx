@@ -62,7 +62,7 @@ export default function Configurator({
   // island never derives defaults itself, and the lazy initializer runs once so
   // an auto-selected option stays fixed for the session.
   const [selection, setSelection] = useState<Selection>(() =>
-    new ConfigurationModel(definition, colorId).defaultSelection(),
+    ConfigurationModel.defaultSelection(definition, colorId),
   );
 
   const model = useMemo(
