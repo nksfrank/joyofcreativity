@@ -86,13 +86,6 @@ export class ConfigurationModel {
     };
   }
 
-  select(partial: Partial<Selection>): ConfigurationModel {
-    return new ConfigurationModel(this.definition, this.colorId, {
-      ...this.selection,
-      ...partial,
-    });
-  }
-
   /**
    * The initial selection the configurator opens with: every *structurally
    * single* required attribute (the family defines exactly one option) is
