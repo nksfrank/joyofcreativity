@@ -1,3 +1,7 @@
+## Package manager
+
+This repo uses **npm** — never yarn or pnpm. The lockfile is `package-lock.json`. Run scripts with `npm run <script>` (e.g. `npm run check`, `npm test`).
+
 ## Development
 
 When starting the dev server, use background mode:

@@ -88,22 +88,22 @@ const soloDefinition: ProductDefinition = {
 
 describe("ConfigurationModel.defaultSelection", () => {
   it("pre-selects the sole size a colour is offered in", () => {
-    const model = new ConfigurationModel(singleSizeDefinition, "cream");
-
-    expect(model.defaultSelection().sizeId).toBe("small");
+    expect(
+      ConfigurationModel.defaultSelection(singleSizeDefinition, "cream").sizeId,
+    ).toBe("small");
   });
 
   it("pre-selects the sole pattern the family offers", () => {
-    const model = new ConfigurationModel(bareDefinition, "cream");
-
-    expect(model.defaultSelection().patternId).toBe("plain");
+    expect(
+      ConfigurationModel.defaultSelection(bareDefinition, "cream").patternId,
+    ).toBe("plain");
   });
 
   it("pre-selects both size and pattern for a single-option family", () => {
-    const selection = new ConfigurationModel(
+    const selection = ConfigurationModel.defaultSelection(
       soloDefinition,
       "cream",
-    ).defaultSelection();
+    );
 
     expect(selection.sizeId).toBe("small");
     expect(selection.patternId).toBe("plain");
@@ -112,21 +112,21 @@ describe("ConfigurationModel.defaultSelection", () => {
   it("does not auto-select a size when more than one is offered, even if only one is in stock", () => {
     // cream offers small (stock 5) and large (stock 0): a real choice exists
     // structurally, so no size is auto-decided just because large is sold out.
-    const model = new ConfigurationModel(definition, "cream");
-
-    expect(model.defaultSelection().sizeId).toBeUndefined();
+    expect(
+      ConfigurationModel.defaultSelection(definition, "cream").sizeId,
+    ).toBeUndefined();
   });
 
   it("does not auto-select a pattern when the family offers more than one", () => {
-    const model = new ConfigurationModel(definition, "cream");
-
-    expect(model.defaultSelection().patternId).toBeUndefined();
+    expect(
+      ConfigurationModel.defaultSelection(definition, "cream").patternId,
+    ).toBeUndefined();
   });
 
   it("leaves yarn empty; single-available yarn fields auto-resolve in yarnFields", () => {
-    const model = new ConfigurationModel(soloDefinition, "cream");
-
-    expect(model.defaultSelection().yarnColorIds).toEqual([]);
+    expect(
+      ConfigurationModel.defaultSelection(soloDefinition, "cream").yarnColorIds,
+    ).toEqual([]);
   });
 });
 
@@ -182,7 +182,7 @@ describe("ConfigurationModel.yarnFields", () => {
   });
 
   it("has no fields for a plain-knit pattern (requiredYarnCount 0)", () => {
-    const model = new ConfigurationModel(bareDefinition, "cream").select({
+    const model = new ConfigurationModel(bareDefinition, "cream", {
       patternId: "plain",
     });
 
@@ -190,7 +190,7 @@ describe("ConfigurationModel.yarnFields", () => {
   });
 
   it("exposes one field per required yarn colour, each offering all available yarns", () => {
-    const model = new ConfigurationModel(definition, "cream").select({
+    const model = new ConfigurationModel(definition, "cream", {
       patternId: "plain",
     });
     const fields = model.yarnFields();
@@ -203,7 +203,7 @@ describe("ConfigurationModel.yarnFields", () => {
   });
 
   it("leaves a multi-option field unresolved until it is picked", () => {
-    const model = new ConfigurationModel(definition, "cream").select({
+    const model = new ConfigurationModel(definition, "cream", {
       patternId: "plain",
       yarnColorIds: ["red"],
     });
@@ -214,7 +214,7 @@ describe("ConfigurationModel.yarnFields", () => {
   });
 
   it("auto-resolves every field when a single yarn colour is available", () => {
-    const model = new ConfigurationModel(soleYarnDefinition, "cream").select({
+    const model = new ConfigurationModel(soleYarnDefinition, "cream", {
       patternId: "plain",
     });
     const fields = model.yarnFields();
@@ -229,11 +229,13 @@ describe("ConfigurationModel.price", () => {
     const model = new ConfigurationModel(definition, "cream");
 
     expect(model.price()).toBeNull();
-    expect(model.select({ sizeId: "small" }).price()).toBeNull();
+    expect(
+      new ConfigurationModel(definition, "cream", { sizeId: "small" }).price(),
+    ).toBeNull();
   });
 
   it("is null until every required yarn field is filled", () => {
-    const model = new ConfigurationModel(definition, "cream").select({
+    const model = new ConfigurationModel(definition, "cream", {
       sizeId: "small",
       patternId: "plain",
       yarnColorIds: ["red"], // only one of the two required fields
@@ -244,7 +246,7 @@ describe("ConfigurationModel.price", () => {
 
   it("is null when a completed selection is not valid", () => {
     // large = blank3, which is out of stock, so a complete selection still prices null.
-    const model = new ConfigurationModel(definition, "cream").select({
+    const model = new ConfigurationModel(definition, "cream", {
       sizeId: "large",
       patternId: "plain",
       yarnColorIds: ["red", "blue"],
@@ -254,7 +256,7 @@ describe("ConfigurationModel.price", () => {
   });
 
   it("reflects each filled yarn field, including a repeated colour", () => {
-    const model = new ConfigurationModel(definition, "cream").select({
+    const model = new ConfigurationModel(definition, "cream", {
       sizeId: "small",
       patternId: "plain",
       yarnColorIds: ["red", "red"],
@@ -265,7 +267,7 @@ describe("ConfigurationModel.price", () => {
   });
 
   it("prices an auto-resolved single-yarn pattern without an explicit pick", () => {
-    const model = new ConfigurationModel(soleYarnDefinition, "cream").select({
+    const model = new ConfigurationModel(soleYarnDefinition, "cream", {
       sizeId: "small",
       patternId: "plain",
     });
@@ -281,7 +283,7 @@ describe("ConfigurationModel.orderItem", () => {
   });
 
   it("is null until every required yarn field is filled", () => {
-    const model = new ConfigurationModel(definition, "cream").select({
+    const model = new ConfigurationModel(definition, "cream", {
       sizeId: "small",
       patternId: "plain",
       yarnColorIds: ["red"],
@@ -292,7 +294,7 @@ describe("ConfigurationModel.orderItem", () => {
 
   it("is null when a completed selection is not valid", () => {
     // large = blank3, which is out of stock.
-    const model = new ConfigurationModel(definition, "cream").select({
+    const model = new ConfigurationModel(definition, "cream", {
       sizeId: "large",
       patternId: "plain",
       yarnColorIds: ["red", "blue"],
@@ -302,7 +304,7 @@ describe("ConfigurationModel.orderItem", () => {
   });
 
   it("returns the configured item when complete and valid, allowing a repeated colour", () => {
-    const model = new ConfigurationModel(definition, "cream").select({
+    const model = new ConfigurationModel(definition, "cream", {
       sizeId: "small",
       patternId: "plain",
       yarnColorIds: ["red", "red"],
@@ -317,7 +319,7 @@ describe("ConfigurationModel.orderItem", () => {
   });
 
   it("resolves from auto-selected yarn fields without an explicit pick", () => {
-    const model = new ConfigurationModel(soleYarnDefinition, "cream").select({
+    const model = new ConfigurationModel(soleYarnDefinition, "cream", {
       sizeId: "small",
       patternId: "plain",
     });
@@ -333,7 +335,7 @@ describe("ConfigurationModel.orderItem", () => {
 
 describe("ConfigurationModel.deadEnd", () => {
   it("returns null when the selection can still be completed", () => {
-    const model = new ConfigurationModel(definition, "cream").select({
+    const model = new ConfigurationModel(definition, "cream", {
       patternId: "plain",
     });
 
@@ -343,7 +345,7 @@ describe("ConfigurationModel.deadEnd", () => {
   it("flags the pattern to reset when no size can complete it", () => {
     // festive only fits blank3 (cream / large), which is out of stock, so no
     // size in cream can complete a festive order.
-    const model = new ConfigurationModel(definition, "cream").select({
+    const model = new ConfigurationModel(definition, "cream", {
       patternId: "festive",
     });
 

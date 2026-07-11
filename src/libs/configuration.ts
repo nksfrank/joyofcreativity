@@ -1,5 +1,5 @@
 import { AvailabilityManager } from "./availability";
-import { resolveBlankOptionsByProduct } from "./blank.utils";
+import { type BlankOption, resolveBlankOptionsByProduct } from "./blank.utils";
 import { type Price, PricingManager } from "./pricing";
 import type {
   PatternVariant,
@@ -27,6 +27,40 @@ export type Selection = {
   customisation: string;
 };
 
+/** Every blank the given colour is offered in, across all sizes (stock included). */
+function resolveBlanksForColour(
+  definition: ProductDefinition,
+  colorId: string,
+): BlankOption[] {
+  return resolveBlankOptionsByProduct(definition).filter(
+    (option) => option.color.id === colorId,
+  );
+}
+
+/**
+ * The sole size this colour is offered in, or undefined when the family
+ * structurally offers more than one — regardless of stock, so a size that is
+ * merely out of stock never collapses a real choice into an auto-select.
+ */
+function soleStructuralSize(
+  definition: ProductDefinition,
+  colorId: string,
+): string | undefined {
+  const sizeIds = new Set(
+    resolveBlanksForColour(definition, colorId).map((option) => option.size.id),
+  );
+  return sizeIds.size === 1 ? [...sizeIds].at(0) : undefined;
+}
+
+/** The sole pattern the family offers, or undefined when it offers more than one. */
+function soleStructuralPattern(
+  definition: ProductDefinition,
+): string | undefined {
+  return definition.patternVariants.length === 1
+    ? definition.patternVariants.at(0)?.pattern.id
+    : undefined;
+}
+
 /**
  * Drives the configurator: given a product family and the (route-fixed) colour,
  * reports which options are selectable. An option is enabled iff at least one
@@ -52,13 +86,6 @@ export class ConfigurationModel {
     };
   }
 
-  select(partial: Partial<Selection>): ConfigurationModel {
-    return new ConfigurationModel(this.definition, this.colorId, {
-      ...this.selection,
-      ...partial,
-    });
-  }
-
   /**
    * The initial selection the configurator opens with: every *structurally
    * single* required attribute (the family defines exactly one option) is
@@ -69,10 +96,13 @@ export class ConfigurationModel {
    * field auto-resolves in {@link yarnFields}. The island seeds its state from
    * this once and never re-derives defaults itself (ADR-0005).
    */
-  defaultSelection(): Selection {
+  static defaultSelection(
+    definition: ProductDefinition,
+    colorId: string,
+  ): Selection {
     return {
-      sizeId: this.soleStructuralSize(),
-      patternId: this.soleStructuralPattern(),
+      sizeId: soleStructuralSize(definition, colorId),
+      patternId: soleStructuralPattern(definition),
       yarnColorIds: [],
       customisation: "",
     };
@@ -227,30 +257,9 @@ export class ConfigurationModel {
     );
   }
 
-  /**
-   * The sole size this colour is offered in, or undefined when the family
-   * structurally offers more than one — regardless of stock, so a size that is
-   * merely out of stock never collapses a real choice into an auto-select.
-   */
-  private soleStructuralSize(): string | undefined {
-    const sizeIds = new Set(
-      this.blanksForColour().map((option) => option.size.id),
-    );
-    return sizeIds.size === 1 ? [...sizeIds].at(0) : undefined;
-  }
-
-  /** The sole pattern the family offers, or undefined when it offers more than one. */
-  private soleStructuralPattern(): string | undefined {
-    return this.definition.patternVariants.length === 1
-      ? this.definition.patternVariants.at(0)?.pattern.id
-      : undefined;
-  }
-
   /** Every blank this colour is offered in, across all sizes (stock included). */
   private blanksForColour() {
-    return resolveBlankOptionsByProduct(this.definition).filter(
-      (option) => option.color.id === this.colorId,
-    );
+    return resolveBlanksForColour(this.definition, this.colorId);
   }
 
   /**
