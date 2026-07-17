@@ -19,7 +19,7 @@ export const sizes: Size[] = [
   { id: "eu-140", name: "140" },
 ];
 
-const blanks: Blank[] = [
+export const blanks: Blank[] = [
   { id: "blank1", colorId: "cream", sizeId: "small", stock: 5 },
   { id: "blank2", colorId: "cream", sizeId: "medium", stock: 3 },
   { id: "blank3", colorId: "cream", sizeId: "large", stock: 0 },
