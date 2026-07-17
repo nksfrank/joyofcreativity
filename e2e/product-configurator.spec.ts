@@ -218,7 +218,7 @@ test("a single-colour family shows the colour but renders no switcher", async ({
   await variantLink.click();
   await page.waitForLoadState("networkidle");
 
-  // Sole colour (ADR-0010): there is nowhere to switch to, so no switcher renders.
+  // Sole colour (ADR-0011): there is nowhere to switch to, so no switcher renders.
   await expect(page.getByRole("navigation", { name: "Colour" })).toHaveCount(0);
   await expect(page.getByTestId("colour-option")).toHaveCount(0);
 

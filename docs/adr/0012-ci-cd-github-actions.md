@@ -1,4 +1,4 @@
-# 9. CI/CD on GitHub Actions, deploying to Cloudflare Workers
+# 12. CI/CD on GitHub Actions, deploying to Cloudflare Workers
 
 Status: Accepted
 

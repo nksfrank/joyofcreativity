@@ -107,7 +107,7 @@ const products: ProductDefinition[] = [
     },
   },
   // A family offered in a single colour (white, blank19-21 across S/M/L). Its product
-  // page renders no colour switcher — there is nowhere to switch to (ADR-0010).
+  // page renders no colour switcher — there is nowhere to switch to (ADR-0011).
   {
     id: "2",
     price: { amount: 69900, currency: "SEK" },
