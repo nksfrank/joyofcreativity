@@ -1,0 +1,447 @@
+<title>Return page — order status UX (#53)</title>
+<style>
+  :root {
+    --wool: #f4efe4;
+    --wool-2: #ece5d6;
+    --ink: #23201b;
+    --ink-soft: #5c564b;
+    --line: #ddd4c2;
+    --indigo: #33507a;
+    --indigo-deep: #263c5c;
+    --card: #fffdf8;
+    --good: #3f7a52;
+    --good-bg: #e6f0e6;
+    --warn: #9a6b1f;
+    --warn-bg: #f5ecd6;
+    --bad: #a2452f;
+    --bad-bg: #f3e2db;
+    --shadow: 0 1px 2px rgba(35,32,27,.06), 0 8px 24px rgba(35,32,27,.07);
+    --radius: 10px;
+    --serif: "Iowan Old Style", "Palatino Linotype", "Palatino", "Georgia", serif;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wool: #1b1915; --wool-2: #24211c; --ink: #efe9dc; --ink-soft: #a9a08e;
+      --line: #38342c; --indigo: #8fb0e0; --indigo-deep: #a9c3e8; --card: #211e19;
+      --good: #7fb98f; --good-bg: #1e2c22; --warn: #d5a959; --warn-bg: #2c2617;
+      --bad: #d98e78; --bad-bg: #2e1e18; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --wool: #1b1915; --wool-2: #24211c; --ink: #efe9dc; --ink-soft: #a9a08e;
+    --line: #38342c; --indigo: #8fb0e0; --indigo-deep: #a9c3e8; --card: #211e19;
+    --good: #7fb98f; --good-bg: #1e2c22; --warn: #d5a959; --warn-bg: #2c2617;
+    --bad: #d98e78; --bad-bg: #2e1e18; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"] {
+    --wool: #f4efe4; --wool-2: #ece5d6; --ink: #23201b; --ink-soft: #5c564b;
+    --line: #ddd4c2; --indigo: #33507a; --indigo-deep: #263c5c; --card: #fffdf8;
+    --good: #3f7a52; --good-bg: #e6f0e6; --warn: #9a6b1f; --warn-bg: #f5ecd6;
+    --bad: #a2452f; --bad-bg: #f3e2db; --shadow: 0 1px 2px rgba(35,32,27,.06), 0 8px 24px rgba(35,32,27,.07);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .wrap {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--wool);
+    min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- prototype harness ---- */
+  .harness {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--wool) 86%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    padding: 14px clamp(16px, 4vw, 40px);
+  }
+  .harness-row { display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: flex-end; max-width: 1100px; margin: 0 auto; }
+  .hgroup { display: flex; flex-direction: column; gap: 7px; }
+  .hlabel { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink-soft);
+    padding: 6px 12px; border-radius: 999px; transition: .15s;
+  }
+  .chip:hover { border-color: var(--indigo); color: var(--ink); }
+  .chip[aria-pressed="true"] { background: var(--indigo); border-color: var(--indigo); color: #fff; font-weight: 600; }
+  :root[data-theme="dark"] .chip[aria-pressed="true"], @media (prefers-color-scheme: dark) { }
+  .harness-note { max-width: 1100px; margin: 10px auto 0; font-size: 12.5px; color: var(--ink-soft); }
+  .harness-note code { font-family: var(--mono); font-size: .92em; background: var(--wool-2); padding: 1px 5px; border-radius: 4px; }
+
+  /* ---- stage ---- */
+  .stage { max-width: 1100px; margin: 0 auto; padding: clamp(20px, 4vw, 44px) clamp(16px, 4vw, 40px) 80px; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 34px; align-items: start; }
+  @media (max-width: 880px) { .stage { grid-template-columns: 1fr; } .annot { order: -1; } }
+
+  /* fake browser frame around the "page" */
+  .browser { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); background: var(--card); }
+  .browser-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--wool-2); border-bottom: 1px solid var(--line); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+  .url { flex: 1; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .page { padding: clamp(24px, 4vw, 44px); }
+  .brand { font-family: var(--serif); font-size: 18px; letter-spacing: .01em; color: var(--indigo-deep); margin: 0 0 26px; display: flex; align-items: center; gap: 9px; }
+  .brand .mark { width: 22px; height: 22px; }
+
+  /* status header block */
+  .status-head { display: flex; gap: 15px; align-items: flex-start; margin-bottom: 8px; }
+  .badge { flex: none; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; }
+  .badge svg { width: 24px; height: 24px; }
+  .b-good { background: var(--good-bg); color: var(--good); }
+  .b-warn { background: var(--warn-bg); color: var(--warn); }
+  .b-bad  { background: var(--bad-bg);  color: var(--bad); }
+  h1.title { font-family: var(--serif); font-weight: 600; font-size: clamp(22px, 3.4vw, 28px); line-height: 1.2; margin: 2px 0 0; text-wrap: balance; }
+  .lede { color: var(--ink-soft); margin: 12px 0 0; max-width: 52ch; }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  .ref { margin: 22px 0 4px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; font-size: 13px; }
+  .ref .k { color: var(--ink-soft); }
+  .ref .v { font-family: var(--mono); font-size: 13px; color: var(--ink); background: var(--wool-2); padding: 2px 8px; border-radius: 5px; }
+
+  hr.rule { border: 0; border-top: 1px solid var(--line); margin: 26px 0; }
+
+  /* receipt */
+  .sec-label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; margin: 0 0 14px; }
+  .line { display: flex; gap: 14px; padding: 14px 0; border-top: 1px solid var(--line); }
+  .line:first-of-type { border-top: 0; }
+  .thumb { flex: none; width: 54px; height: 54px; border-radius: 8px; background: linear-gradient(135deg, var(--indigo) 0%, var(--indigo-deep) 100%); opacity: .9; }
+  .line-body { flex: 1; min-width: 0; }
+  .line-name { font-weight: 600; }
+  .line-cfg { font-size: 13px; color: var(--ink-soft); margin-top: 3px; }
+  .line-cfg span { white-space: nowrap; }
+  .line-cfg span + span::before { content: "·"; margin: 0 7px; color: var(--line); }
+  .line-price { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }
+  .line-qty { color: var(--ink-soft); font-size: 13px; }
+
+  .totals { margin-top: 6px; }
+  .trow { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .trow.grand { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 14px; font-family: var(--serif); font-size: 19px; font-weight: 600; }
+  .trow .lbl { color: var(--ink-soft); }
+  .trow.grand .lbl { color: var(--ink); }
+
+  .fieldset { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 520px) { .fieldset { grid-template-columns: 1fr; } }
+  .addr { font-size: 13.5px; line-height: 1.55; }
+  .addr .who { font-weight: 600; }
+
+  .note { font-size: 12.5px; color: var(--ink-soft); background: var(--wool-2); border-radius: 8px; padding: 12px 14px; margin-top: 16px; display: flex; gap: 9px; }
+  .note svg { flex: none; width: 15px; height: 15px; margin-top: 2px; color: var(--ink-soft); }
+
+  /* actions */
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+  .btn { font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; border-radius: 8px; padding: 11px 20px; border: 1px solid transparent; transition: .15s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+  .btn-primary { background: var(--indigo); color: #fff; }
+  .btn-primary:hover { background: var(--indigo-deep); }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  .btn-ghost:hover { border-color: var(--ink-soft); }
+
+  /* pending live poll */
+  .poll { display: flex; align-items: center; gap: 12px; margin-top: 22px; background: var(--warn-bg); border-radius: 10px; padding: 14px 16px; }
+  .spinner { flex: none; width: 20px; height: 20px; border: 2.5px solid color-mix(in srgb, var(--warn) 35%, transparent); border-top-color: var(--warn); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+  .poll-txt { font-size: 13px; color: var(--ink); }
+  .poll-txt .sub { color: var(--ink-soft); display: block; margin-top: 2px; }
+
+  .hidden { display: none !important; }
+
+  /* annotation rail */
+  .annot { position: sticky; top: 96px; font-size: 13px; }
+  .annot h3 { font-family: var(--serif); font-size: 15px; margin: 0 0 6px; }
+  .annot .card2 { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+  .annot p { margin: 0 0 10px; color: var(--ink-soft); line-height: 1.55; }
+  .annot p:last-child { margin-bottom: 0; }
+  .annot code { font-family: var(--mono); font-size: 12px; background: var(--wool-2); padding: 1px 5px; border-radius: 4px; color: var(--ink); }
+  .annot .tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; padding: 2px 8px; border-radius: 5px; margin-bottom: 10px; }
+  .tag-good { background: var(--good-bg); color: var(--good); }
+  .tag-warn { background: var(--warn-bg); color: var(--warn); }
+  .tag-bad  { background: var(--bad-bg);  color: var(--bad); }
+  .annot ul { margin: 0; padding-left: 18px; color: var(--ink-soft); }
+  .annot li { margin-bottom: 6px; }
+
+  .decline-panel { max-width: 1100px; margin: 0 auto; padding: 0 clamp(16px,4vw,40px) 70px; }
+  .decline-panel .card2 { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--bad); border-radius: var(--radius); padding: 20px 22px; box-shadow: var(--shadow); }
+  .decline-panel h3 { font-family: var(--serif); font-size: 17px; margin: 0 0 4px; }
+  .decline-panel p { color: var(--ink-soft); margin: 8px 0 0; max-width: 74ch; font-size: 13.5px; }
+  .decline-panel code { font-family: var(--mono); font-size: 12.5px; background: var(--wool-2); padding: 1px 5px; border-radius: 4px; color: var(--ink); }
+</style>
+
+<div class="wrap">
+  <div class="harness">
+    <div class="harness-row">
+      <div class="hgroup">
+        <span class="hlabel">Return-page state</span>
+        <div class="chips" id="stateChips">
+          <button class="chip" data-state="paid" aria-pressed="true">✓ paid — confirmed</button>
+          <button class="chip" data-state="pending" aria-pressed="false">◷ pending — async gap</button>
+          <button class="chip" data-state="failed" aria-pressed="false">✕ failed</button>
+          <button class="chip" data-state="expired" aria-pressed="false">⏱ expired</button>
+          <button class="chip" data-state="notfound" aria-pressed="false">? unknown ref</button>
+        </div>
+      </div>
+      <div class="hgroup">
+        <span class="hlabel">Order locale (frozen · #49)</span>
+        <div class="chips" id="localeChips">
+          <button class="chip" data-locale="sv" aria-pressed="true">Svenska</button>
+          <button class="chip" data-locale="en" aria-pressed="false">English</button>
+        </div>
+      </div>
+      <div class="hgroup" id="demoGroup">
+        <span class="hlabel">Demo the poll</span>
+        <div class="chips">
+          <button class="chip" id="simWebhook">▶ Simulate webhook arrives</button>
+          <button class="chip" id="simTimeout">⏱ Simulate poll cap reached</button>
+        </div>
+      </div>
+    </div>
+    <p class="harness-note">
+      This prototype renders the <strong>customer return page</strong> keyed by order reference, showing whatever D1 status is true at that instant.
+      A card decline is <em>not</em> a state here — see the panel below the page.
+    </p>
+  </div>
+
+  <div class="stage">
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url" id="url">joyofcreativity.se/sv/order/01J8ZK9M4QXR7T2VN3HB6WESYD</span>
+      </div>
+      <div class="page" id="page"><!-- rendered by JS --></div>
+    </div>
+
+    <aside class="annot">
+      <div class="card2" id="annot"><!-- rendered by JS --></div>
+    </aside>
+  </div>
+
+  <div class="decline-panel">
+    <div class="card2">
+      <h3 id="declineTitle">Card decline — handled inside the Stripe embed, never reaches this page</h3>
+      <p id="declineBody">
+        A card decline produces <strong>no server webhook</strong> (per Order lifecycle #35). Stripe's embedded Checkout shows its own inline
+        error under the card field and keeps the customer on the checkout step to try another card — they never redirect here. We design
+        <strong>nothing</strong> for this case: the order stays <code>pending</code> and is cleaned up by <code>checkout.session.expired</code>.
+        Only an <em>async</em> failure (Klarna/Swish declined after leaving) fires <code>async_payment_failed</code> → the <strong>failed</strong> state above.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------------- content model ----------------
+  // One order, resolved in its frozen locale (#49). Store is VAT-exempt today (småföretag, #36).
+  const order = {
+    ref: "01J8ZK9M4QXR7T2VN3HB6WESYD",
+    email: "astrid@example.se",
+    lines: [{
+      thumb: true,
+      name: { sv: "Stickad mössa – ”Nordan”", en: "Knitted beanie — “Nordan”" },
+      cfg: {
+        sv: ["Färg: Havsblå", "Storlek: M", "Mönster: Tvåfärgad ränd", "Garn: Ljusgrå · Havsblå", "Text: ”Astrid”"],
+        en: ["Colour: Sea blue", "Size: M", "Pattern: Two-colour stripe", "Yarn: Light grey · Sea blue", "Text: “Astrid”"]
+      },
+      qty: 1, price: "545,00 kr"
+    }],
+    subtotal: "545,00 kr", shipping: "49,00 kr", grand: "594,00 kr",
+    ship: { who: "Astrid Lund", lines: ["Sjögatan 12, 2 tr", "411 07 Göteborg", "Sverige"] },
+    bill: { who: "Astrid Lund", lines: ["Sjögatan 12, 2 tr", "411 07 Göteborg", "Sverige"] }
+  };
+
+  const T = {
+    sv: {
+      brand: "Joy of Creativity",
+      // paid
+      paidTitle: "Tack för din beställning!",
+      paidLede: "Betalningen är bekräftad. Vi har mejlat kvittot och orderbekräftelsen till <strong>{email}</strong>.",
+      ordered: "Beställt", shipTo: "Levereras till", billTo: "Faktureras till",
+      subtotal: "Delsumma", shipping: "Frakt", grand: "Totalt",
+      vatNote: "Säljaren är inte momsregistrerad (småföretag) – ingen moms tas ut. Kvittot är din verifikation.",
+      withdrawNote: "Ångerrätt gäller ej – varan är specialtillverkad efter dina val. Reklamationsrätten (3 år) gäller alltid.",
+      qty: "Antal",
+      // pending
+      pendTitle: "Vi bekräftar din betalning …",
+      pendLede: "Din beställning är <strong>mottagen</strong>. Betalningen behandlas just nu – det tar oftast bara någon sekund med Swish och Klarna.",
+      pollMain: "Väntar på bekräftelse från betalleverantören",
+      pollSub: "Sidan uppdateras automatiskt. Du kan stänga den – vi mejlar bekräftelsen så snart betalningen är klar.",
+      capMain: "Det tar längre tid än vanligt",
+      capSub: "Ingen fara – din orderbekräftelse kommer via mejl så snart betalningen är klar. Du kan stänga sidan.",
+      // failed / expired
+      failTitle: "Betalningen gick inte igenom",
+      failLede: "Ingen betalning drogs och ingen beställning lades. Din kundvagn är sparad – du kan försöka igen.",
+      expTitle: "Kassan avbröts",
+      expLede: "Kassan var öppen för länge och stängdes. Ingen betalning drogs. Din kundvagn är sparad – börja om när du vill.",
+      backToCart: "Tillbaka till kundvagnen",
+      keepShopping: "Fortsätt handla",
+      // notfound
+      nfTitle: "Vi hittar ingen beställning här",
+      nfLede: "Länken kan ha skrivits fel eller gått ut. Har du fått en orderbekräftelse på mejl finns referensen där.",
+      contact: "Kontakta oss",
+      refLabel: "Ordernr"
+    },
+    en: {
+      brand: "Joy of Creativity",
+      paidTitle: "Thank you for your order!",
+      paidLede: "Your payment is confirmed. We've emailed the receipt and order confirmation to <strong>{email}</strong>.",
+      ordered: "Ordered", shipTo: "Ships to", billTo: "Billed to",
+      subtotal: "Subtotal", shipping: "Shipping", grand: "Total",
+      vatNote: "The seller is not VAT-registered (small business) — no VAT is charged. This receipt is your record.",
+      withdrawNote: "No right of withdrawal — this item is made to order from your choices. Your 3-year right to complain always applies.",
+      qty: "Qty",
+      pendTitle: "Confirming your payment …",
+      pendLede: "Your order is <strong>received</strong>. The payment is being processed — this usually takes only a second with Swish or Klarna.",
+      pollMain: "Waiting for confirmation from the payment provider",
+      pollSub: "This page updates automatically. You can close it — we'll email your confirmation as soon as the payment clears.",
+      capMain: "This is taking longer than usual",
+      capSub: "No problem — your order confirmation will arrive by email once the payment clears. You can close this page.",
+      failTitle: "Your payment didn't go through",
+      failLede: "No payment was taken and no order was placed. Your cart is saved — you can try again.",
+      expTitle: "Your checkout timed out",
+      expLede: "The checkout was open too long and closed. No payment was taken. Your cart is saved — start again whenever you like.",
+      backToCart: "Back to your cart",
+      keepShopping: "Keep shopping",
+      nfTitle: "We can't find an order here",
+      nfLede: "The link may be mistyped or expired. If you received an order confirmation by email, the reference is in there.",
+      contact: "Contact us",
+      refLabel: "Order no."
+    }
+  };
+
+  const ICON = {
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+    q: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7"/><path d="M12 17h.01"/></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>'
+  };
+  const markSvg = '<svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 14c3-6 13-6 16 0M6 14c2-4 10-4 12 0M8 14c1.3-2.5 6.7-2.5 8 0" stroke-linecap="round"/></svg>';
+
+  let state = "paid", locale = "sv", capped = false;
+
+  function receiptHtml(t) {
+    const l = order.lines.map(li => `
+      <div class="line">
+        <div class="thumb"></div>
+        <div class="line-body">
+          <div class="line-name">${li.name[locale]}</div>
+          <div class="line-cfg">${li.cfg[locale].map(c => `<span>${c}</span>`).join("")}</div>
+          <div class="line-qty">${t.qty}: ${li.qty}</div>
+        </div>
+        <div class="line-price">${li.price}</div>
+      </div>`).join("");
+    return `
+      <hr class="rule">
+      <p class="sec-label">${t.ordered}</p>
+      ${l}
+      <div class="totals">
+        <div class="trow"><span class="lbl">${t.subtotal}</span><span>${order.subtotal}</span></div>
+        <div class="trow"><span class="lbl">${t.shipping}</span><span>${order.shipping}</span></div>
+        <div class="trow grand"><span class="lbl">${t.grand}</span><span>${order.grand}</span></div>
+      </div>
+      <div class="note">${ICON.info}<span>${t.vatNote}</span></div>
+      <hr class="rule">
+      <div class="fieldset">
+        <div class="addr"><p class="sec-label">${t.shipTo}</p><div class="who">${order.ship.who}</div>${order.ship.lines.join("<br>")}</div>
+        <div class="addr"><p class="sec-label">${t.billTo}</p><div class="who">${order.bill.who}</div>${order.bill.lines.join("<br>")}</div>
+      </div>
+      <div class="note">${ICON.info}<span>${t.withdrawNote}</span></div>`;
+  }
+
+  function refHtml(t) {
+    return `<div class="ref"><span class="k">${t.refLabel}</span><span class="v">${order.ref}</span></div>`;
+  }
+
+  function render() {
+    const t = T[locale];
+    const page = document.getElementById("page");
+    document.getElementById("url").textContent =
+      `joyofcreativity.se/${locale}/order/` + (state === "notfound" ? "01XXINVALIDREF00000000000" : order.ref);
+    let html = `<div class="brand">${markSvg}${t.brand}</div>`;
+
+    if (state === "paid") {
+      html += `<div class="status-head"><div class="badge b-good">${ICON.check}</div><div><h1 class="title">${t.paidTitle}</h1>
+        <p class="lede">${t.paidLede.replace("{email}", order.email)}</p></div></div>${refHtml(t)}${receiptHtml(t)}`;
+    } else if (state === "pending") {
+      html += `<div class="status-head"><div class="badge b-warn">${ICON.clock}</div><div><h1 class="title">${t.pendTitle}</h1>
+        <p class="lede">${t.pendLede}</p></div></div>${refHtml(t)}
+        <div class="poll">
+          <div class="spinner" ${capped ? 'style="display:none"' : ""}></div>
+          ${capped ? `<div class="badge b-warn" style="width:20px;height:20px">${ICON.info}</div>` : ""}
+          <div class="poll-txt"><span>${capped ? t.capMain : t.pollMain}</span>
+          <span class="sub">${capped ? t.capSub : t.pollSub}</span></div>
+        </div>`;
+    } else if (state === "failed" || state === "expired") {
+      const isFail = state === "failed";
+      html += `<div class="status-head"><div class="badge b-bad">${ICON.x}</div><div>
+        <h1 class="title">${isFail ? t.failTitle : t.expTitle}</h1>
+        <p class="lede">${isFail ? t.failLede : t.expLede}</p></div></div>${refHtml(t)}
+        <div class="actions"><a class="btn btn-primary" href="#">${t.backToCart}</a>
+        <a class="btn btn-ghost" href="#">${t.keepShopping}</a></div>`;
+    } else if (state === "notfound") {
+      html += `<div class="status-head"><div class="badge b-warn">${ICON.q}</div><div>
+        <h1 class="title">${t.nfTitle}</h1><p class="lede">${t.nfLede}</p></div></div>
+        <div class="actions"><a class="btn btn-primary" href="#">${t.keepShopping}</a>
+        <a class="btn btn-ghost" href="#">${t.contact}</a></div>`;
+    }
+    page.innerHTML = html;
+    renderAnnot();
+    document.getElementById("demoGroup").style.visibility = state === "pending" ? "visible" : "hidden";
+  }
+
+  const ANNOT = {
+    paid: { tag: "tag-good", label: "status = paid", h: "The happy path",
+      body: `<p>Reached when the webhook already landed by return time (all card payments; Swish/Klarna that cleared fast).</p>
+      <p>The full receipt is re-rendered <strong>live from <code>receipt_snapshot</code></strong> in the order's frozen locale (#49). The emailed receipt is byte-identical and remains the authoritative <em>verifikation</em>.</p>
+      <p>VAT note reflects the småföretag exemption (#36); withdrawal note reflects the made-to-order exemption (#50).</p>` },
+    pending: { tag: "tag-warn", label: "status = pending", h: "The Klarna / Swish async gap",
+      body: `<p>Customer arrives before the webhook. We <strong>never claim “paid”</strong> — the copy says <em>received</em> and <em>processing</em>.</p>
+      <p><strong>Live poll</strong> (your call): a small <code>getOrderStatus</code> Action, every ~2s, capped ~90s. On flip → the page reloads so the server re-renders the <code>paid</code> receipt (one renderer, no client duplication).</p>
+      <p>After the cap → static fallback pointing at the authoritative email (#35). No <code>processing</code> state exists server-side — this is all one <code>pending</code> row.</p>` },
+    failed: { tag: "tag-bad", label: "status = failed", h: "Async payment failed",
+      body: `<p>Only <code>async_payment_failed</code> (Klarna/Swish) lands here — a card decline never does (see panel below).</p>
+      <p>Retry = <strong>back to the cart</strong>, still populated from localStorage (ADR-0001); a fresh checkout reuses the whole #33 handoff. No re-embed machinery.</p>
+      <p>The failed <code>pending</code> row is a harmless record; no stock was held.</p>` },
+    expired: { tag: "tag-bad", label: "status = expired", h: "Session timed out",
+      body: `<p><code>checkout.session.expired</code> fired (#35). Same recovery as failed: back to the saved cart.</p>
+      <p>Also the <strong>abandoned-checkout</strong> answer — the customer who closed the tab just returns to their persistent cart. No dedicated resume flow (your call).</p>` },
+    notfound: { tag: "tag-warn", label: "no matching row", h: "Safety net",
+      body: `<p>Not a lifecycle state — a mistyped/expired link, or a reference with no D1 row.</p>
+      <p>No PII, no order detail. Just a gentle redirect to keep shopping or contact us. The email always carries the real reference.</p>` }
+  };
+  function renderAnnot() {
+    const a = ANNOT[state];
+    document.getElementById("annot").innerHTML =
+      `<span class="tag ${a.tag}">${a.label}</span><h3>${a.h}</h3>${a.body}`;
+  }
+
+  // ---- harness wiring ----
+  document.getElementById("stateChips").addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    state = b.dataset.state; capped = false;
+    [...document.querySelectorAll("#stateChips .chip")].forEach(c => c.setAttribute("aria-pressed", c === b));
+    render();
+  });
+  document.getElementById("localeChips").addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    locale = b.dataset.locale;
+    [...document.querySelectorAll("#localeChips .chip")].forEach(c => c.setAttribute("aria-pressed", c === b));
+    render();
+  });
+  document.getElementById("simWebhook").addEventListener("click", () => {
+    state = "paid"; capped = false;
+    [...document.querySelectorAll("#stateChips .chip")].forEach(c => c.setAttribute("aria-pressed", c.dataset.state === "paid"));
+    render();
+  });
+  document.getElementById("simTimeout").addEventListener("click", () => {
+    if (state !== "pending") { state = "pending"; [...document.querySelectorAll("#stateChips .chip")].forEach(c => c.setAttribute("aria-pressed", c.dataset.state === "pending")); }
+    capped = true; render();
+  });
+
+  render();
+</script>
