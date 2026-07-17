@@ -1,3 +1,4 @@
+import type { StockSnapshot } from "@/libs/blank.types";
 import { describeBlank } from "@/libs/blank.utils";
 import { resolveProductBlank } from "@/libs/product.utils";
 import { assert } from "@/utils/assert";
@@ -11,9 +12,14 @@ type RuleSuccess = { ok: true };
 type RuleFailure = { ok: false; reason: string };
 type RuleResult = RuleSuccess | RuleFailure;
 type AvailabilityRule = (item: ProductOrderItem) => RuleResult;
-type AvailabilityFn = (definition: ProductDefinition) => AvailabilityRule;
+type AvailabilityFn = (
+  definition: ProductDefinition,
+  stock: StockSnapshot,
+) => AvailabilityRule;
 
-const blankInStock: AvailabilityFn = (definition) => (item) => {
+// Stock is an explicit input (#58): on-hand comes from the injected snapshot,
+// never from `blank.stock`. A blank missing from the snapshot counts as zero.
+const blankInStock: AvailabilityFn = (definition, stock) => (item) => {
   const blank = resolveProductBlank(definition, item.blankId);
   if (!blank) {
     return {
@@ -21,7 +27,7 @@ const blankInStock: AvailabilityFn = (definition) => (item) => {
       reason: `This product is not available in the selected color and size`,
     };
   }
-  if (blank.stock <= 0) {
+  if ((stock.get(blank.id) ?? 0) <= 0) {
     return {
       ok: false,
       reason: `${describeBlank(blank)} is out of stock`,
@@ -112,7 +118,7 @@ const customisationValid: AvailabilityFn = (definition) => (item) => {
 export class AvailabilityManager {
   private rules: AvailabilityRule[];
 
-  constructor(definition: ProductDefinition) {
+  constructor(definition: ProductDefinition, stock: StockSnapshot) {
     this.rules = [
       blankInStock,
       patternCompatibleWithBlank,
@@ -120,7 +126,7 @@ export class AvailabilityManager {
       patternYarnCountValid,
       customisationAllowed,
       customisationValid,
-    ].map((rule) => rule(definition));
+    ].map((rule) => rule(definition, stock));
   }
 
   check(item: ProductOrderItem): RuleFailure[] {

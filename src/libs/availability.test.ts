@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { AvailabilityManager } from "./availability";
+import type { StockSnapshot } from "./blank.types";
 import type { ProductDefinition, ProductOrderItem } from "./product.types";
 
 const noModifier = { value: 0, type: "fixed" } as const;
 
-// blank1 (cream/small) has stock 5, so blankInStock passes for it.
+// Stock is an injected snapshot (#58), not read from the fixture blank: blank1
+// is in stock here, so every rule but blankInStock is what the checks exercise.
+const inStock: StockSnapshot = new Map([["blank1", 5]]);
+
 const definition: ProductDefinition = {
   id: "product1",
   price: { amount: 0, currency: "SEK" } as ProductDefinition["price"],
@@ -36,10 +40,50 @@ const itemWithYarns = (yarnColorIds: string[]): ProductOrderItem => ({
   customisation: "",
 });
 
+describe("blankInStock (stock from injected snapshot)", () => {
+  // A fully valid item (2 yarns, no customisation); only the snapshot decides stock.
+  const validItem = itemWithYarns(["yarn1", "yarn2"]);
+
+  it("passes when the snapshot has the blank in stock", () => {
+    expect(
+      new AvailabilityManager(definition, new Map([["blank1", 3]])).isAvailable(
+        validItem,
+      ),
+    ).toBe(true);
+  });
+
+  it("fails as out of stock when the snapshot reports zero on-hand", () => {
+    const failures = new AvailabilityManager(
+      definition,
+      new Map([["blank1", 0]]),
+    ).check(validItem);
+
+    expect(failures).toContainEqual(
+      expect.objectContaining({
+        ok: false,
+        reason: "Cream Small is out of stock",
+      }),
+    );
+  });
+
+  it("treats a blank absent from the snapshot as out of stock", () => {
+    const failures = new AvailabilityManager(definition, new Map()).check(
+      validItem,
+    );
+
+    expect(failures).toContainEqual(
+      expect.objectContaining({
+        ok: false,
+        reason: "Cream Small is out of stock",
+      }),
+    );
+  });
+});
+
 describe("patternYarnCountValid (exact-count rule)", () => {
   // "Twin" requires exactly 2 yarn colours.
   it("rejects fewer than requiredYarnCount yarn colors", () => {
-    const failures = new AvailabilityManager(definition).check(
+    const failures = new AvailabilityManager(definition, inStock).check(
       itemWithYarns(["yarn1"]),
     );
     expect(failures).toContainEqual(
@@ -52,7 +96,7 @@ describe("patternYarnCountValid (exact-count rule)", () => {
 
   it("passes at exactly requiredYarnCount yarn colors", () => {
     expect(
-      new AvailabilityManager(definition).isAvailable(
+      new AvailabilityManager(definition, inStock).isAvailable(
         itemWithYarns(["yarn1", "yarn2"]),
       ),
     ).toBe(true);
@@ -60,14 +104,14 @@ describe("patternYarnCountValid (exact-count rule)", () => {
 
   it("passes at exactly requiredYarnCount when a colour is repeated", () => {
     expect(
-      new AvailabilityManager(definition).isAvailable(
+      new AvailabilityManager(definition, inStock).isAvailable(
         itemWithYarns(["yarn1", "yarn1"]),
       ),
     ).toBe(true);
   });
 
   it("rejects more than requiredYarnCount yarn colors", () => {
-    const failures = new AvailabilityManager(definition).check(
+    const failures = new AvailabilityManager(definition, inStock).check(
       itemWithYarns(["yarn1", "yarn2", "yarn3"]),
     );
     expect(failures).toContainEqual(
@@ -89,7 +133,7 @@ describe("customisation rules", () => {
 
   // definition above forbids text (allowText:false, maxLength:0).
   it("gives a single clear reason when text is forbidden (no bogus max-length reason)", () => {
-    const failures = new AvailabilityManager(definition).check(
+    const failures = new AvailabilityManager(definition, inStock).check(
       withCustomisation("hello"),
     );
     expect(failures).toEqual([
@@ -102,7 +146,9 @@ describe("customisation rules", () => {
 
   it("passes when a text-forbidding product is given empty text", () => {
     expect(
-      new AvailabilityManager(definition).isAvailable(withCustomisation("")),
+      new AvailabilityManager(definition, inStock).isAvailable(
+        withCustomisation(""),
+      ),
     ).toBe(true);
   });
 
@@ -113,14 +159,14 @@ describe("customisation rules", () => {
 
   it("allows text within maxLength when text is permitted", () => {
     expect(
-      new AvailabilityManager(textAllowed).isAvailable(
+      new AvailabilityManager(textAllowed, inStock).isAvailable(
         withCustomisation("abc"),
       ),
     ).toBe(true);
   });
 
   it("rejects text exceeding maxLength when text is permitted", () => {
-    const failures = new AvailabilityManager(textAllowed).check(
+    const failures = new AvailabilityManager(textAllowed, inStock).check(
       withCustomisation("abcd"),
     );
     expect(failures).toEqual([
