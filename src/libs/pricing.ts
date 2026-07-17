@@ -1,5 +1,5 @@
 import type { Locale } from "@/i18n/runtime";
-import { resolveProductBlank } from "@/libs/product.utils";
+import { ProductCatalogue } from "@/libs/product-catalogue";
 import { assert } from "@/utils/assert";
 import type { ProductDefinition, ProductOrderItem } from "./product.types";
 
@@ -27,30 +27,34 @@ const applyModifier = (
     ? modifier.value
     : Math.round((basePrice.amount * modifier.value) / 100);
 
-const blankPrice: PriceRule = (definition) => (item) => {
-  const blank = resolveProductBlank(definition, item.blankId);
-  assert(blank, `Blank ${item.blankId} not found`);
-  const productBlank = definition.blanks.find((pb) => pb.blankId === blank.id);
-  assert(productBlank, `Blank ${blank.id} not offered by this product`);
-  return applyModifier(definition.price, productBlank.priceModifier);
-};
-
-const patternPrice: PriceRule = (definition) => (item) => {
-  const variant = definition.patternVariants.find(
-    (variant) => variant.pattern.id === item.patternId,
-  );
-  assert(variant, `Pattern with id ${item.patternId} not found`);
-  return applyModifier(definition.price, variant.pattern.priceModifier);
-};
-
-const yarnPrice: PriceRule = (definition) => (item) =>
-  item.yarnColorIds.reduce((total, yarnColorId) => {
-    const yarnColor = definition.availableYarnColours.find(
-      (color) => color.id === yarnColorId,
+const blankPrice: PriceRule = (definition) => {
+  const products = new ProductCatalogue(definition);
+  return (item) => {
+    const blank = products.requireOfferedBlank(item.blankId);
+    const productBlank = definition.blanks.find(
+      (pb) => pb.blankId === blank.id,
     );
-    assert(yarnColor, `Yarn color with id ${yarnColorId} not found`);
-    return total + applyModifier(definition.price, yarnColor.priceModifier);
-  }, 0);
+    assert(productBlank, `Blank ${blank.id} not offered by this product`);
+    return applyModifier(definition.price, productBlank.priceModifier);
+  };
+};
+
+const patternPrice: PriceRule = (definition) => {
+  const products = new ProductCatalogue(definition);
+  return (item) => {
+    const variant = products.requirePatternVariant(item.patternId);
+    return applyModifier(definition.price, variant.pattern.priceModifier);
+  };
+};
+
+const yarnPrice: PriceRule = (definition) => {
+  const products = new ProductCatalogue(definition);
+  return (item) =>
+    item.yarnColorIds.reduce((total, yarnColorId) => {
+      const yarnColor = products.requireYarnColor(yarnColorId);
+      return total + applyModifier(definition.price, yarnColor.priceModifier);
+    }, 0);
+};
 
 const customisationPrice: PriceRule = (definition) => (item) =>
   item.customisation

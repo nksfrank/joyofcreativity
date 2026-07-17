@@ -1,26 +1,27 @@
 import { localizeHref } from "@/i18n/runtime";
-import { colors, getBlankById, sizes } from "./blank";
 import type { Blank, Color, Size } from "./blank.types";
-import { resolveBlankOptionsByProduct } from "./blank.utils";
+import { catalogue } from "./catalogue";
 import type {
   ProductDefinition,
   ProductDetail,
   SeoMeta,
 } from "./product.types";
+import { ProductCatalogue } from "./product-catalogue";
 
 /** The canonical, localized URL for a product detail page. */
 const getProductDetailHref = (
   detail: Pick<ProductDetail, "id" | "details">,
 ): string => localizeHref(`/product/${detail.id}/${detail.details.slug}`);
 
-/** Resolves a blank id to the shared blank, but only if this product actually offers it. */
+/**
+ * @deprecated Superseded by {@link ProductCatalogue.getOfferedBlank} (#72
+ * migrate). Kept as a delegating shim until the contract step removes it (#73).
+ */
 export const resolveProductBlank = (
-  definition: Pick<ProductDefinition, "blanks">,
+  definition: ProductDefinition,
   blankId: string,
-): Blank | undefined => {
-  const offered = definition.blanks.some((pb) => pb.blankId === blankId);
-  return offered ? getBlankById(blankId) : undefined;
-};
+): Blank | undefined =>
+  new ProductCatalogue(definition).getOfferedBlank(blankId);
 
 /** A sibling ProductDetail of the same product family, for linking between variants. */
 export type ProductDetailVariant = ProductDetail & {
@@ -42,9 +43,9 @@ export const resolveProductDetailVariants = (
   siblings
     .filter((sibling) => sibling.productId === detail.productId)
     .map((sibling): ProductDetailVariant | undefined => {
-      const blank = getBlankById(sibling.blankId);
-      const color = colors.find((c) => c.id === blank?.colorId);
-      const size = sizes.find((s) => s.id === blank?.sizeId);
+      const blank = catalogue.getBlank(sibling.blankId);
+      const color = blank && catalogue.getColor(blank.colorId);
+      const size = blank && catalogue.getSize(blank.sizeId);
       if (!blank || !color || !size) {
         return undefined;
       }
@@ -84,16 +85,18 @@ export const resolveColourPages = (
   const family = details.filter((d) => d.productId === definition.id);
   const base = family.at(0)?.details;
 
+  const products = new ProductCatalogue(definition);
   const seen = new Set<string>();
   const pages: ColourPage[] = [];
-  for (const option of resolveBlankOptionsByProduct(definition)) {
+  for (const option of products.blankOptions()) {
     if (seen.has(option.color.id)) {
       continue;
     }
     seen.add(option.color.id);
 
     const curated = family.find(
-      (detail) => getBlankById(detail.blankId)?.colorId === option.color.id,
+      (detail) =>
+        catalogue.getBlank(detail.blankId)?.colorId === option.color.id,
     );
     if (curated) {
       pages.push({

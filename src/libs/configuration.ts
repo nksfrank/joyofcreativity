@@ -1,12 +1,13 @@
 import { AvailabilityManager } from "./availability";
 import type { StockSnapshot } from "./blank.types";
-import { type BlankOption, resolveBlankOptionsByProduct } from "./blank.utils";
+import type { BlankOption } from "./blank.utils";
 import { type Price, PricingManager } from "./pricing";
 import type {
   PatternVariant,
   ProductDefinition,
   ProductOrderItem,
 } from "./product.types";
+import { ProductCatalogue } from "./product-catalogue";
 
 export type OptionView = { id: string; label: string; disabled: boolean };
 
@@ -33,9 +34,9 @@ function resolveBlanksForColour(
   definition: ProductDefinition,
   colorId: string,
 ): BlankOption[] {
-  return resolveBlankOptionsByProduct(definition).filter(
-    (option) => option.color.id === colorId,
-  );
+  return new ProductCatalogue(definition)
+    .blankOptions()
+    .filter((option) => option.color.id === colorId);
 }
 
 /**
@@ -71,6 +72,7 @@ function soleStructuralPattern(
 export class ConfigurationModel {
   private readonly availability: AvailabilityManager;
   private readonly pricing: PricingManager;
+  private readonly products: ProductCatalogue;
   private readonly selection: Selection;
 
   constructor(
@@ -81,6 +83,7 @@ export class ConfigurationModel {
   ) {
     this.availability = new AvailabilityManager(definition, stock);
     this.pricing = new PricingManager(definition);
+    this.products = new ProductCatalogue(definition);
     this.selection = {
       yarnColorIds: [],
       customisation: "",
@@ -182,9 +185,7 @@ export class ConfigurationModel {
         ?.size.name ?? "";
     const pattern = this.findVariant(item.patternId)?.pattern.name ?? "";
     const yarnColours = item.yarnColorIds.map(
-      (id) =>
-        this.definition.availableYarnColours.find((yarn) => yarn.id === id)
-          ?.name ?? "",
+      (id) => this.products.getYarnColor(id)?.name ?? "",
     );
     return { size, pattern, yarnColours };
   }
@@ -242,9 +243,7 @@ export class ConfigurationModel {
   }
 
   private findVariant(patternId: string): PatternVariant | undefined {
-    return this.definition.patternVariants.find(
-      (variant) => variant.pattern.id === patternId,
-    );
+    return this.products.getPatternVariant(patternId);
   }
 
   private selectedVariant(): PatternVariant | undefined {
