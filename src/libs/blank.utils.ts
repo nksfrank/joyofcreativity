@@ -1,15 +1,6 @@
 import { getBlankById } from "./blank";
 import type { Blank, Color, Size, StockSnapshot } from "./blank.types";
-import { catalogue } from "./catalogue";
 import type { ProductDefinition } from "./product.types";
-import { ProductCatalogue } from "./product-catalogue";
-
-/**
- * @deprecated Superseded by {@link Catalogue.describe} (#72 migrate). Kept as a
- * delegating shim until the contract step removes it (#73).
- */
-export const describeBlank = (blank: Blank): string =>
-  catalogue.describe(blank);
 
 /** A blank this product offers, joined with its color/size names for display. */
 export type BlankOption = {
@@ -17,14 +8,6 @@ export type BlankOption = {
   color: Color;
   size: Size;
 };
-
-/**
- * @deprecated Superseded by {@link ProductCatalogue.blankOptions} (#72 migrate).
- * Kept as a delegating shim until the contract step removes it (#73).
- */
-export const resolveBlankOptionsByProduct = (
-  definition: ProductDefinition,
-): BlankOption[] => new ProductCatalogue(definition).blankOptions();
 
 /**
  * Builds a StockSnapshot from the fixture stock of every blank a product offers.

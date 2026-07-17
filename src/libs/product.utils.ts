@@ -1,5 +1,5 @@
 import { localizeHref } from "@/i18n/runtime";
-import type { Blank, Color, Size } from "./blank.types";
+import type { Color, Size } from "./blank.types";
 import { catalogue } from "./catalogue";
 import type {
   ProductDefinition,
@@ -12,16 +12,6 @@ import { ProductCatalogue } from "./product-catalogue";
 const getProductDetailHref = (
   detail: Pick<ProductDetail, "id" | "details">,
 ): string => localizeHref(`/product/${detail.id}/${detail.details.slug}`);
-
-/**
- * @deprecated Superseded by {@link ProductCatalogue.getOfferedBlank} (#72
- * migrate). Kept as a delegating shim until the contract step removes it (#73).
- */
-export const resolveProductBlank = (
-  definition: ProductDefinition,
-  blankId: string,
-): Blank | undefined =>
-  new ProductCatalogue(definition).getOfferedBlank(blankId);
 
 /** A sibling ProductDetail of the same product family, for linking between variants. */
 export type ProductDetailVariant = ProductDetail & {

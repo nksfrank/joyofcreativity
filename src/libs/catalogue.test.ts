@@ -83,7 +83,7 @@ describe("Catalogue", () => {
       ).toBe("Red Large");
     });
 
-    it("describe omits missing parts, matching describeBlank's tolerance", () => {
+    it("describe omits missing parts (unknown colour or size)", () => {
       expect(
         catalogue.describe({
           id: "x",

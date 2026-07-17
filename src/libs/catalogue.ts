@@ -75,7 +75,7 @@ export class Catalogue {
 
   /**
    * Human-readable label for a blank, e.g. "Cream Small". Tolerant of missing
-   * parts (byte-identical to the current `describeBlank`).
+   * parts (an unknown colour or size is simply omitted from the label).
    */
   describe(blank: Blank): string {
     const color = this.getColor(blank.colorId);
