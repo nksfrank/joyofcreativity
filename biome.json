@@ -51,6 +51,64 @@
           }
         }
       }
+    },
+    {
+      "includes": ["**/src/libs/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/server",
+                      "**/server/**",
+                      "**/actions",
+                      "**/actions/**",
+                      "**/components",
+                      "**/components/**",
+                      "**/stores",
+                      "**/stores/**"
+                    ],
+                    "message": "src/libs/ is the isomorphic domain core (ADR-0013) and must not import from server/, actions/, components/, or stores/. A need for this is the smell that server-only concern has leaked into the core — move the shared code into libs/ or utils/, or invert the dependency."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/src/components/**",
+        "**/src/stores/**",
+        "**/src/pages/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/server",
+                      "**/server/**",
+                      "**/actions",
+                      "**/actions/**"
+                    ],
+                    "message": "Client-shipped code must not import from src/server/ or src/actions/ directly (ADR-0014): it would pull Effect's fixed bundle cost into the browser. Call server logic through the `astro:actions` module (`import { actions } from 'astro:actions'`)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

@@ -11,6 +11,12 @@
     "directory": "./dist/client",
     "not_found_handling": "404-page",
   },
+  // Demo binding proving server code reads config from the Cloudflare env
+  // (see ADR-0013). The `/dev/server-check` route echoes this back; it carries
+  // no real meaning and can be removed once a real binding replaces it.
+  "vars": {
+    "SERVER_SURFACE_GREETING": "hello from the cloudflare edge",
+  },
   "observability": {
     "enabled": true,
   },
