@@ -1,0 +1,595 @@
+<!-- PROTOTYPE — throwaway copy draft for issue #52. Not production. -->
+<title>Transaktionsmejl & kvitto — copy-utkast (#52)</title>
+<style>
+  :root {
+    --page: #FBFAF8;
+    --card: #FFFFFF;
+    --ink: #24211D;
+    --muted: #6B655E;
+    --faint: #9A948C;
+    --hairline: #E8E3DB;
+    --hairline-strong: #D8D2C8;
+    --accent: #1F5A4C;
+    --accent-soft: #E9F1ED;
+    --amber: #9A5B18;
+    --amber-soft: #FBF0DE;
+    --red: #A63A2E;
+    --red-soft: #F8E7E3;
+    --chrome-bg: #F1EEE8;
+    --shadow: 0 1px 2px rgba(36,33,29,.06), 0 8px 28px rgba(36,33,29,.08);
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #17150F; --card: #201D17; --ink: #EDE9E1; --muted: #A79F93;
+      --faint: #7C7568; --hairline: #322D24; --hairline-strong: #3E3830;
+      --accent: #6DBBA6; --accent-soft: #16332C; --amber: #D69A52; --amber-soft: #33260F;
+      --red: #E08a7d; --red-soft: #3a201c; --chrome-bg: #1C1913;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #17150F; --card: #201D17; --ink: #EDE9E1; --muted: #A79F93;
+    --faint: #7C7568; --hairline: #322D24; --hairline-strong: #3E3830;
+    --accent: #6DBBA6; --accent-soft: #16332C; --amber: #D69A52; --amber-soft: #33260F;
+    --red: #E08a7d; --red-soft: #3a201c; --chrome-bg: #1C1913;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.4);
+  }
+  :root[data-theme="light"] {
+    --page: #FBFAF8; --card: #FFFFFF; --ink: #24211D; --muted: #6B655E;
+    --faint: #9A948C; --hairline: #E8E3DB; --hairline-strong: #D8D2C8;
+    --accent: #1F5A4C; --accent-soft: #E9F1ED; --amber: #9A5B18; --amber-soft: #FBF0DE;
+    --red: #A63A2E; --red-soft: #F8E7E3; --chrome-bg: #F1EEE8;
+    --shadow: 0 1px 2px rgba(36,33,29,.06), 0 8px 28px rgba(36,33,29,.08);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--sans);
+    line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+  /* ---- control bar ---- */
+  .bar { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--page) 88%, transparent);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline);
+    padding: 12px clamp(12px, 4vw, 32px); display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: center; }
+  .bar .brand { font-family: var(--serif); font-size: 15px; font-weight: 700; letter-spacing: -.01em;
+    display: flex; align-items: baseline; gap: 9px; }
+  .bar .brand small { font-family: var(--sans); font-weight: 500; font-size: 11px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--faint); }
+  .grp { display: flex; flex-direction: column; gap: 5px; }
+  .grp > span { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+  .seg { display: inline-flex; background: var(--chrome-bg); border: 1px solid var(--hairline); border-radius: 8px; padding: 3px; gap: 2px; }
+  .seg button { font: inherit; font-size: 12.5px; font-weight: 550; border: 0; background: transparent; color: var(--muted);
+    padding: 5px 11px; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: background .12s, color .12s; }
+  .seg button:hover { color: var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.09); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .spacer { flex: 1 1 auto; }
+
+  /* ---- stage ---- */
+  .stage { max-width: 1180px; margin: 0 auto; padding: clamp(20px, 4vw, 44px) clamp(12px, 4vw, 32px) 90px;
+    display: grid; grid-template-columns: minmax(0, 640px) minmax(0, 300px); gap: clamp(20px, 4vw, 48px);
+    align-items: start; justify-content: center; }
+  @media (max-width: 900px) { .stage { grid-template-columns: minmax(0, 640px); } .notes-col { display: none; } }
+
+  .lead { grid-column: 1 / -1; max-width: 660px; margin: 0 auto 4px; text-align: center; }
+  .lead h1 { font-family: var(--serif); font-size: clamp(22px, 3vw, 28px); margin: 0 0 8px; letter-spacing: -.015em; text-wrap: balance; }
+  .lead p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+  /* envelope meta */
+  .env { border: 1px solid var(--hairline); border-radius: 12px 12px 0 0; background: var(--card);
+    border-bottom: 0; padding: 14px 18px; font-size: 13px; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
+  .env dt { color: var(--faint); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; align-self: center; }
+  .env dd { margin: 0; color: var(--ink); }
+  .env .subj { font-weight: 650; }
+  .env .pre { color: var(--muted); font-style: italic; }
+
+  /* the email body */
+  .email { background: var(--card); border: 1px solid var(--hairline); border-radius: 0 0 12px 12px;
+    box-shadow: var(--shadow); overflow: hidden; }
+  .email-pad { padding: clamp(22px, 5%, 40px); }
+  .masthead { text-align: center; padding-bottom: 6px; }
+  .masthead .logo { font-family: var(--serif); font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+  .masthead .kicker { margin-top: 4px; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  .accentbar { height: 3px; background: var(--accent); }
+
+  .email h2 { font-family: var(--serif); font-size: 21px; margin: 4px 0 6px; letter-spacing: -.01em; }
+  .email h3 { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint);
+    margin: 26px 0 10px; font-weight: 600; }
+  .email p { margin: 0 0 13px; font-size: 14.5px; }
+  .email .hi { font-size: 15.5px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 12.5px; color: var(--muted); }
+  a { color: var(--accent); }
+
+  .rule { border: 0; border-top: 1px solid var(--hairline); margin: 22px 0; }
+
+  /* receipt meta grid */
+  .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 18px; font-size: 13px; margin: 4px 0 4px; }
+  .meta .k { color: var(--faint); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
+  .meta .v { font-weight: 600; }
+  .meta .v.mono { font-family: var(--mono); font-weight: 600; font-size: 13px; }
+
+  .addr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 520px) { .addr-grid, .meta { grid-template-columns: 1fr; } }
+  .addr { font-size: 13.5px; line-height: 1.45; }
+  .addr .lbl { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-bottom: 4px; font-weight: 600; }
+
+  /* line items */
+  .line { display: flex; gap: 14px; padding: 15px 0; border-top: 1px solid var(--hairline); }
+  .line:first-of-type { border-top: 0; }
+  .thumb { flex: 0 0 46px; height: 46px; border-radius: 8px; background: var(--accent-soft);
+    display: grid; place-items: center; font-family: var(--serif); font-weight: 700; color: var(--accent); font-size: 17px; }
+  .line .body { flex: 1 1 auto; min-width: 0; }
+  .line .name { font-weight: 650; font-size: 14.5px; }
+  .line .conf { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .line .conf b { color: var(--ink); font-weight: 600; }
+  .line .amt { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .line .amt .u { font-size: 12px; color: var(--faint); }
+  .line .amt .t { font-weight: 650; font-size: 14.5px; }
+
+  .flag { display: inline-block; margin-top: 7px; font-size: 11.5px; padding: 2px 8px; border-radius: 999px;
+    font-weight: 600; letter-spacing: .01em; }
+  .flag.made { background: var(--accent-soft); color: var(--accent); }
+  .flag.over { background: var(--amber-soft); color: var(--amber); }
+
+  /* totals */
+  .totals { margin-top: 4px; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  .totals .row { display: flex; justify-content: space-between; padding: 5px 0; }
+  .totals .row.grand { border-top: 2px solid var(--hairline-strong); margin-top: 6px; padding-top: 11px;
+    font-size: 16px; font-weight: 700; font-family: var(--serif); }
+  .totals .row .k { color: var(--muted); }
+  .totals .row.grand .k { color: var(--ink); }
+
+  /* callout boxes */
+  .box { border-radius: 10px; padding: 14px 16px; font-size: 13.5px; margin: 16px 0; }
+  .box p { margin: 0 0 8px; font-size: 13.5px; }
+  .box p:last-child { margin-bottom: 0; }
+  .box .bh { font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .box.vat { background: var(--chrome-bg); }
+  .box.amber { background: var(--amber-soft); color: color-mix(in srgb, var(--amber) 82%, var(--ink)); }
+  .box.amber .bh { color: var(--amber); }
+  .box.red { background: var(--red-soft); color: color-mix(in srgb, var(--red) 78%, var(--ink)); }
+  .box.red .bh { color: var(--red); }
+  .box.accent { background: var(--accent-soft); }
+
+  .btn { display: inline-block; background: var(--accent); color: #fff; text-decoration: none;
+    padding: 11px 22px; border-radius: 8px; font-weight: 650; font-size: 14px; }
+  :root[data-theme="dark"] .btn, .btn { color: #fff; }
+  @media (prefers-color-scheme: dark) { .btn { color: #10241E; } }
+  :root[data-theme="dark"] .btn { color: #10241E; }
+  .btn-wrap { text-align: center; margin: 22px 0 6px; }
+
+  .foot { text-align: center; font-size: 11.5px; color: var(--faint); padding: 22px clamp(22px,5%,40px) 30px;
+    border-top: 1px solid var(--hairline); background: var(--chrome-bg); }
+  .foot p { margin: 3px 0; }
+
+  .ph { background: repeating-linear-gradient(-45deg, transparent, transparent 5px,
+    color-mix(in srgb, var(--faint) 22%, transparent) 5px, color-mix(in srgb, var(--faint) 22%, transparent) 6px);
+    border-radius: 3px; padding: 0 4px; font-style: normal; color: var(--muted); }
+
+  /* annotation column */
+  .notes-col { position: sticky; top: 84px; display: flex; flex-direction: column; gap: 14px; }
+  .note { border: 1px solid var(--hairline); border-left: 3px solid var(--accent); border-radius: 8px;
+    background: var(--card); padding: 13px 15px; font-size: 12.5px; color: var(--muted); }
+  .note h4 { margin: 0 0 5px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink); }
+  .note p { margin: 0 0 7px; }
+  .note p:last-child { margin: 0; }
+  .note code { font-family: var(--mono); font-size: 11.5px; background: var(--chrome-bg); padding: 1px 4px; border-radius: 4px; color: var(--ink); }
+  .note a { color: var(--accent); }
+
+  .hidden { display: none !important; }
+  @media (prefers-reduced-motion: no-preference) { .email, .env, .note { transition: none; } }
+</style>
+
+<div class="bar">
+  <div class="brand">Joy&nbsp;of&nbsp;Creativity <small>Copy-utkast · #52</small></div>
+  <div class="spacer"></div>
+  <div class="grp">
+    <span>Språk / Locale</span>
+    <div class="seg" id="lang">
+      <button data-lang="sv" aria-pressed="true">Svenska</button>
+      <button data-lang="en" aria-pressed="false">English</button>
+    </div>
+  </div>
+  <div class="grp">
+    <span>Mejl</span>
+    <div class="seg" id="mail">
+      <button data-mail="confirm" aria-pressed="true">Orderbekräftelse / kvitto</button>
+      <button data-mail="partial" aria-pressed="false">Delvis levererbar</button>
+      <button data-mail="shipped" aria-pressed="false">Skickad</button>
+      <button data-mail="alert" aria-pressed="false">Butiksägare: översålt</button>
+    </div>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="lead">
+    <h1 id="lead-h">Orderbekräftelse &amp; kvitto</h1>
+    <p id="lead-p">Fyra transaktionsmejl att reagera på. Utkast — allt inom <span class="ph">rastrerat</span> är platshållare.</p>
+  </div>
+
+  <div class="main-col">
+    <dl class="env" id="env"></dl>
+    <div class="email" id="email"></div>
+  </div>
+
+  <aside class="notes-col" id="notes"></aside>
+</div>
+
+<script>
+/* ============================ shared order data ============================ */
+const SELLER = {
+  name: "[Företagets namn]", org: "[Org.nr XXXXXX-XXXX]", vatno: "[Momsreg.nr SE…01]",
+  addr: "[Gatuadress]", zip: "[Postnr Ort]", email: "[kontakt@…]", phone: "[+46 …]"
+};
+const ORDER = {
+  ref: "JOY-01JQ8Z4K7B", invoice: "2026-000142", date: "2026-07-17", paid: "Stripe · Klarna",
+  billName: "Astrid Lindqvist", billAddr: "Storgatan 4", billZip: "852 30 Sundsvall", billCountry: "Sverige",
+  shipName: "Astrid Lindqvist", shipAddr: "Körsbärsvägen 12", shipZip: "114 23 Stockholm", shipCountry: "Sverige",
+  email: "astrid@example.se",
+  carrier: "PostNord", tracking: "[SE1234567890123]",
+  shipping: "79,00 kr"
+};
+/* line items — quantities/prices shared; oversell touches line 2 in the "partial" mail */
+const LINES = {
+  sv: [
+    { badge:"S", name:"Handstickad tröja – Signatur", qty:1, unit:"899,00 kr", total:"899,00 kr",
+      conf:[["Färg","Havsblå"],["Storlek","M"],["Mönster","Signaturbokstav"],["Garn","Havsblå + Ljusgrå"],["Text","”Astrid”"]],
+      made:true },
+    { badge:"M", name:"Handstickad mössa – Klassisk", qty:2, unit:"349,00 kr", total:"698,00 kr",
+      conf:[["Färg","Kastanj"],["Storlek","One size"],["Mönster","Slät"],["Garn","Kastanj"]],
+      made:false, oversellQty:1 }
+  ],
+  en: [
+    { badge:"S", name:"Hand-knit sweater – Signature", qty:1, unit:"SEK 899.00", total:"SEK 899.00",
+      conf:[["Colour","Sea blue"],["Size","M"],["Pattern","Signature letter"],["Yarn","Sea blue + Light grey"],["Text","“Astrid”"]],
+      made:true },
+    { badge:"M", name:"Hand-knit hat – Classic", qty:2, unit:"SEK 349.00", total:"SEK 698.00",
+      conf:[["Colour","Chestnut"],["Size","One size"],["Pattern","Plain"],["Yarn","Chestnut"]],
+      made:false, oversellQty:1 }
+  ]
+};
+const MONEY = {
+  sv: { sub:"1 597,00 kr", ship:"79,00 kr", grand:"1 676,00 kr",
+        partialSub:"1 248,00 kr", partialShip:"79,00 kr", partialGrand:"1 327,00 kr", refund:"349,00 kr" },
+  en: { sub:"SEK 1,597.00", ship:"SEK 79.00", grand:"SEK 1,676.00",
+        partialSub:"SEK 1,248.00", partialShip:"SEK 79.00", partialGrand:"SEK 1,327.00", refund:"SEK 349.00" }
+};
+
+/* ============================ copy strings ============================ */
+const T = {
+  sv: {
+    env: {
+      confirm: { from:`${SELLER.name} &lt;[order@…]&gt;`, to:ORDER.email, subj:`Orderbekräftelse & kvitto · ${ORDER.ref}`, pre:`Tack för din beställning! Här är ditt kvitto och din verifikation.` },
+      partial: { from:`${SELLER.name} &lt;[order@…]&gt;`, to:ORDER.email, subj:`Orderbekräftelse & kvitto · ${ORDER.ref}`, pre:`Tack för din beställning — vi behöver stämma av en vara med dig.` },
+      shipped: { from:`${SELLER.name} &lt;[order@…]&gt;`, to:ORDER.email, subj:`Din order är på väg · ${ORDER.ref}`, pre:`Vi har skickat din beställning. Spåra paketet här.` },
+      alert:   { from:`Joy of Creativity system &lt;[system@…]&gt;`, to:"[butiksägare@…]", subj:`⚠ Översålt: order ${ORDER.ref}`, pre:`Betald order kunde inte täckas av lagret — åtgärd krävs.` }
+    },
+    kicker: { confirm:"Kvitto · Verifikation", partial:"Kvitto · Verifikation", shipped:"Leveransbesked", alert:"Internt · Åtgärd krävs" },
+    heading:{ confirm:"Tack för din beställning!", partial:"Tack för din beställning!", shipped:"Din order är på väg", alert:"Order kunde inte täckas av lagret" }
+  },
+  en: {
+    env: {
+      confirm: { from:`${SELLER.name} &lt;[order@…]&gt;`, to:ORDER.email, subj:`Order confirmation & receipt · ${ORDER.ref}`, pre:`Thanks for your order! Here is your receipt and invoice.` },
+      partial: { from:`${SELLER.name} &lt;[order@…]&gt;`, to:ORDER.email, subj:`Order confirmation & receipt · ${ORDER.ref}`, pre:`Thanks for your order — we need to check one item with you.` },
+      shipped: { from:`${SELLER.name} &lt;[order@…]&gt;`, to:ORDER.email, subj:`Your order is on its way · ${ORDER.ref}`, pre:`We’ve shipped your order. Track it here.` },
+      alert:   { from:`Joy of Creativity system &lt;[system@…]&gt;`, to:"[shopkeeper@…]", subj:`⚠ Oversold: order ${ORDER.ref}`, pre:`A paid order exceeded available stock — action needed.` }
+    },
+    kicker: { confirm:"Receipt · Invoice", partial:"Receipt · Invoice", shipped:"Shipping update", alert:"Internal · Action required" },
+    heading:{ confirm:"Thank you for your order!", partial:"Thank you for your order!", shipped:"Your order is on its way", alert:"Order exceeded available stock" }
+  }
+};
+
+/* ============================ builders ============================ */
+const esc = s => s;
+function lineHTML(l, lang, opts={}) {
+  const conf = l.conf.map(([k,v]) => `<b>${k}:</b> ${v}`).join(" &nbsp;·&nbsp; ");
+  let flag = "";
+  if (opts.showMade && l.made) flag = `<span class="flag made">${lang==="sv"?"Specialtillverkad – ingen ångerrätt":"Made to order – no right of withdrawal"}</span>`;
+  if (opts.oversell && l.oversellQty) {
+    const t = lang==="sv"
+      ? `${l.oversellQty} av ${l.qty} slut i lager · vi hör av oss`
+      : `${l.oversellQty} of ${l.qty} out of stock · we’ll be in touch`;
+    flag = `<span class="flag over">${t}</span>`;
+  }
+  const qtyLbl = lang==="sv"?"st":"×";
+  return `<div class="line">
+    <div class="thumb">${l.badge}</div>
+    <div class="body">
+      <div class="name">${l.name}</div>
+      <div class="conf">${conf}</div>
+      ${flag}
+    </div>
+    <div class="amt">
+      <div class="u">${l.qty} ${qtyLbl} · ${l.unit}</div>
+      <div class="t">${l.total}</div>
+    </div>
+  </div>`;
+}
+
+function sellerBlock(lang) {
+  const lbl = lang==="sv" ? "Säljare" : "Seller";
+  return `<div class="addr">
+    <span class="lbl">${lbl}</span>
+    <span class="ph">${SELLER.name}</span><br>
+    <span class="ph">${SELLER.org}</span><br>
+    <span class="ph">${SELLER.addr}, ${SELLER.zip}</span><br>
+    <span class="ph">${SELLER.email}</span>
+  </div>`;
+}
+function addrBlock(lang, which) {
+  const isBill = which==="bill";
+  const lbl = lang==="sv" ? (isBill?"Fakturaadress":"Leveransadress") : (isBill?"Billing address":"Delivery address");
+  const n = isBill?ORDER.billName:ORDER.shipName, a = isBill?ORDER.billAddr:ORDER.shipAddr,
+        z = isBill?ORDER.billZip:ORDER.shipZip, c = isBill?ORDER.billCountry:ORDER.shipCountry;
+  return `<div class="addr"><span class="lbl">${lbl}</span>${n}<br>${a}<br>${z}<br>${c}</div>`;
+}
+
+function receiptMeta(lang) {
+  const L = lang==="sv"
+    ? {inv:"Verifikations-/fakturanr", ref:"Orderreferens", date:"Orderdatum", pay:"Betalning"}
+    : {inv:"Invoice / receipt no.", ref:"Order reference", date:"Order date", pay:"Payment"};
+  return `<div class="meta">
+    <div><div class="k">${L.inv}</div><div class="v mono">${ORDER.invoice}</div></div>
+    <div><div class="k">${L.ref}</div><div class="v mono">${ORDER.ref}</div></div>
+    <div><div class="k">${L.date}</div><div class="v">${ORDER.date}</div></div>
+    <div><div class="k">${L.pay}</div><div class="v">${ORDER.paid}</div></div>
+  </div>`;
+}
+
+function vatBox(lang) {
+  const t = lang==="sv"
+    ? { h:"Moms", p:`Moms tas inte ut. Säljaren är befriad från moms enligt reglerna om <b>omsättningsgräns för små företag</b> (mervärdesskattelagen). Angivna priser är slutpriser.` }
+    : { h:"VAT", p:`No VAT is charged. The seller is exempt under the <b>small-business turnover threshold</b> (Swedish VAT Act). All prices shown are final.` };
+  return `<div class="box vat"><div class="bh">${t.h}</div><p>${t.p}</p></div>`;
+}
+
+function totals(lang, partial=false) {
+  const M = MONEY[lang];
+  const L = lang==="sv"
+    ? {sub:"Delsumma", ship:"Frakt", grand:"Att betala", vat:"Varav moms"}
+    : {sub:"Subtotal", ship:"Shipping", grand:"Total paid", vat:"of which VAT"};
+  const sub = partial?M.partialSub:M.sub, ship = partial?M.partialShip:M.ship, grand = partial?M.partialGrand:M.grand;
+  const vatRow = `<div class="row"><span class="k">${L.vat} (0 %)</span><span>${lang==="sv"?"0,00 kr":"SEK 0.00"}</span></div>`;
+  return `<div class="totals">
+    <div class="row"><span class="k">${L.sub}</span><span>${sub}</span></div>
+    <div class="row"><span class="k">${L.ship}</span><span>${ship}</span></div>
+    ${vatRow}
+    <div class="row grand"><span class="k">${L.grand}</span><span>${grand}</span></div>
+  </div>`;
+}
+
+function withdrawalBox(lang) {
+  const t = lang==="sv" ? {
+    h:"Ångerrätt & reklamation",
+    p1:`<b>Specialtillverkade varor</b> (t.ex. med egen text eller egna färgval) omfattas <b>inte</b> av ångerrätten, eftersom de tillverkas efter din beställning (distansavtalslagen 2 kap. 11 §). Detta gäller tröjan ovan.`,
+    p2:`För <b>lagervaror</b> gäller <b>14 dagars ångerrätt</b> från att du tar emot varan.`,
+    p3:`<b>Reklamationsrätt i 3 år</b> gäller alltid om något är fel på varan.`,
+    link:`Fullständiga villkor: <a href="#">[Ånger- & returpolicy]</a>`
+  } : {
+    h:"Right of withdrawal & complaints",
+    p1:`<b>Made-to-order items</b> (e.g. with custom text or your own colour choices) are <b>not</b> covered by the right of withdrawal, as they are produced for you (Swedish Distance Contracts Act, ch. 2 §11). This applies to the sweater above.`,
+    p2:`For <b>stock items</b>, a <b>14-day right of withdrawal</b> applies from the day you receive the item.`,
+    p3:`A <b>3-year right to complain</b> always applies if an item is faulty.`,
+    link:`Full terms: <a href="#">[Withdrawal & returns policy]</a>`
+  };
+  return `<div class="box accent"><div class="bh">${t.h}</div><p>${t.p1}</p><p>${t.p2}</p><p>${t.p3}</p><p class="small">${t.link}</p></div>`;
+}
+
+function footer(lang) {
+  const t = lang==="sv"
+    ? `Detta mejl är ditt kvitto och din verifikation — spara det. Frågor? Svara på mejlet eller kontakta <span class="ph">${SELLER.email}</span>.`
+    : `This email is your receipt and invoice — please keep it. Questions? Reply to this email or contact <span class="ph">${SELLER.email}</span>.`;
+  return `<div class="foot"><p>${t}</p><p class="ph">${SELLER.name} · ${SELLER.org} · ${SELLER.addr}, ${SELLER.zip}</p></div>`;
+}
+
+/* ---- full emails ---- */
+function buildConfirm(lang, partial) {
+  const H = T[lang].heading[partial?"partial":"confirm"];
+  const K = T[lang].kicker[partial?"partial":"confirm"];
+  const hi = lang==="sv" ? `Hej ${ORDER.shipName.split(" ")[0]},` : `Hi ${ORDER.shipName.split(" ")[0]},`;
+  const intro = partial
+    ? (lang==="sv"
+        ? `tack för din beställning! Vi har tagit emot din betalning. En vara behöver vi dock <b>stämma av med dig</b> innan vi slutför ordern — se den markerade raden nedan. Vi hör av oss inom kort.`
+        : `thank you for your order! We’ve received your payment. There’s one item we need to <b>check with you</b> before completing your order — see the flagged line below. We’ll be in touch shortly.`)
+    : (lang==="sv"
+        ? `tack för din beställning! Vi har tagit emot din betalning och börjar handsticka dina varor. Nedan är ditt kvitto som också är din verifikation — spara det.`
+        : `thank you for your order! We’ve received your payment and are starting to hand-knit your items. Below is your receipt, which also serves as your invoice — please keep it.`);
+  const oversellNotice = partial ? oversellNoticeBox(lang) : "";
+  const secOrder = lang==="sv"?"Din beställning":"Your order";
+  const secAddr  = lang==="sv"?"Adresser":"Addresses";
+  return `
+    <div class="accentbar"></div>
+    <div class="email-pad">
+      <div class="masthead"><div class="logo">Joy of Creativity</div><div class="kicker">${K}</div></div>
+      <h2>${H}</h2>
+      <p class="hi">${hi}</p>
+      <p>${intro}</p>
+      ${oversellNotice}
+      ${receiptMeta(lang)}
+      <hr class="rule">
+      <h3>${secOrder}</h3>
+      ${LINES[lang].map(l => lineHTML(l, lang, {showMade:!partial, oversell:partial})).join("")}
+      ${totals(lang, false)}
+      ${vatBox(lang)}
+      <hr class="rule">
+      <h3>${secAddr}</h3>
+      <div class="addr-grid">${addrBlock(lang,"ship")}${addrBlock(lang,"bill")}</div>
+      <div style="height:16px"></div>
+      ${sellerBlock(lang)}
+      <hr class="rule">
+      ${withdrawalBox(lang)}
+    </div>
+    ${footer(lang)}`;
+}
+
+function oversellNoticeBox(lang) {
+  const t = lang==="sv" ? {
+    h:"En vara behöver vi stämma av med dig",
+    p1:`<b>Handstickad mössa – Klassisk</b>: du beställde 2, men just nu kan vi bara få fram 1. Den sista tog slut i samma stund som din order kom in.`,
+    p2:`Vi hör av oss inom kort så bestämmer vi <b>tillsammans</b> hur du vill göra — komplettera med det vi kan skicka, eller avboka och få hela beloppet tillbaka. Du behöver inte göra något just nu.`
+  } : {
+    h:"One item we need to check with you",
+    p1:`<b>Hand-knit hat – Classic</b>: you ordered 2, but right now we can only make 1 available. The last one sold out the moment your order came in.`,
+    p2:`We’ll be in touch shortly to decide <b>together</b> how you’d like to proceed — keep what we can send, or cancel and get a full refund. There’s nothing you need to do right now.`
+  };
+  return `<div class="box amber"><div class="bh">⚠ ${t.h}</div><p>${t.p1}</p><p>${t.p2}</p></div>`;
+}
+
+function buildShipped(lang) {
+  const hi = lang==="sv" ? `Hej ${ORDER.shipName.split(" ")[0]},` : `Hi ${ORDER.shipName.split(" ")[0]},`;
+  const t = lang==="sv" ? {
+    intro:`goda nyheter — din beställning är packad och på väg till dig.`,
+    carrier:"Transportör", trackNo:"Kolli-/spårningsnr", track:"Spåra paketet",
+    sec:"Det här är på väg", ship:"Skickas till",
+    note:`Leveranstiden beror på transportören. Spårningen kan ta några timmar innan den uppdateras.`
+  } : {
+    intro:`good news — your order is packed and on its way to you.`,
+    carrier:"Carrier", trackNo:"Tracking number", track:"Track your parcel",
+    sec:"What’s on the way", ship:"Shipping to",
+    note:`Delivery time depends on the carrier. Tracking may take a few hours to update.`
+  };
+  const shippedLines = LINES[lang].map(l => lineHTML(l, lang, {})).join("");
+  return `
+    <div class="accentbar"></div>
+    <div class="email-pad">
+      <div class="masthead"><div class="logo">Joy of Creativity</div><div class="kicker">${T[lang].kicker.shipped}</div></div>
+      <h2>${T[lang].heading.shipped}</h2>
+      <p class="hi">${hi}</p>
+      <p>${t.intro}</p>
+      <div class="meta">
+        <div><div class="k">${t.carrier}</div><div class="v"><span class="ph">${ORDER.carrier}</span></div></div>
+        <div><div class="k">${t.trackNo}</div><div class="v mono"><span class="ph">${ORDER.tracking}</span></div></div>
+      </div>
+      <div class="btn-wrap"><a class="btn" href="#">${t.track} →</a></div>
+      <p class="small" style="text-align:center">${t.note}</p>
+      <hr class="rule">
+      <h3>${t.sec}</h3>
+      ${shippedLines}
+      <hr class="rule">
+      <div class="addr-grid">${addrBlock(lang,"ship")}<div class="addr"><span class="lbl">${lang==="sv"?"Orderreferens":"Order reference"}</span><span class="mono">${ORDER.ref}</span></div></div>
+    </div>
+    ${footer(lang)}`;
+}
+
+function buildAlert(lang) {
+  const t = lang==="sv" ? {
+    kicker:T.sv.kicker.alert, head:T.sv.heading.alert,
+    intro:`En betald order kunde inte täckas fullt ut av lagret. Kunden har fått veta att du hör av dig — <b>inget beslut har lovats</b>. <b>Åtgärd krävs:</b> kontakta kunden och kom överens om hur ni gör, genomför sedan en ev. återbetalning i Stripe.`,
+    secLines:"Översålda rader", secDo:"Att göra",
+    l1:`<b>Handstickad mössa – Klassisk</b> (Kastanj, One size)`,
+    l1d:`Beställt: 2 · Kunde levereras: 1 · <b>Översålt: 1</b>`,
+    cust:"Kund", order:"Order",
+    do1:`Kontakta kunden och kom överens: komplettera med det som kan skickas + återbetala den översålda raden (<b>${MONEY.sv.refund}</b>), eller avboka och full återbetalning.`,
+    do2:`Genomför den överenskomna återbetalningen i Stripe (manuellt — ingen automatisk återbetalning).`,
+    do3:`Kontrollera lagersaldot för den berörda mössan.`,
+    btn:"Öppna ordern i admin"
+  } : {
+    kicker:T.en.kicker.alert, head:T.en.heading.alert,
+    intro:`A paid order could not be fully covered by stock. The customer has been told you’ll be in touch — <b>no outcome was promised</b>. <b>Action required:</b> contact the customer, agree how to proceed, then issue any refund in Stripe.`,
+    secLines:"Oversold lines", secDo:"To do",
+    l1:`<b>Hand-knit hat – Classic</b> (Chestnut, One size)`,
+    l1d:`Ordered: 2 · Could ship: 1 · <b>Oversold: 1</b>`,
+    cust:"Customer", order:"Order",
+    do1:`Contact the customer and agree: keep what can ship + refund the oversold line (<b>${MONEY.en.refund}</b>), or cancel with a full refund.`,
+    do2:`Process the agreed refund in Stripe (manual — no automatic refund).`,
+    do3:`Check the stock level for the affected hat.`,
+    btn:"Open order in admin"
+  };
+  return `
+    <div class="accentbar" style="background:var(--amber)"></div>
+    <div class="email-pad">
+      <div class="masthead"><div class="logo">Joy of Creativity</div><div class="kicker" style="color:var(--amber)">${t.kicker}</div></div>
+      <h2>${t.head}</h2>
+      <p>${t.intro}</p>
+      <div class="meta">
+        <div><div class="k">${t.order}</div><div class="v mono">${ORDER.ref}</div></div>
+        <div><div class="k">${t.cust}</div><div class="v">${ORDER.shipName} · <span class="mono" style="font-size:12px">${ORDER.email}</span></div></div>
+      </div>
+      <div class="box amber">
+        <div class="bh">⚠ ${t.secLines}</div>
+        <p>${t.l1}<br><span class="small">${t.l1d}</span></p>
+      </div>
+      <h3>${t.secDo}</h3>
+      <div class="box red">
+        <p>1. ${t.do1}</p><p>2. ${t.do2}</p><p>3. ${t.do3}</p>
+      </div>
+      <div class="btn-wrap"><a class="btn" href="#" style="background:var(--amber)">${t.btn} →</a></div>
+      <p class="small" style="text-align:center"><span class="ph">/admin/orders/${ORDER.ref}</span></p>
+    </div>`;
+}
+
+/* ============================ annotations ============================ */
+const NOTES = {
+  confirm: [
+    ["Detta mejl = verifikationen","Bekräftelsen <i>är</i> kvittot och verifikationen (#36). Full fakturagrad alltid: säljaridentitet, verifikationsnr, orderreferens, snapshottade rader, båda adresser, frakt och momsrad."],
+    ["Moms idag: 0 %","Butiken är momsbefriad småföretagare, så momsrutan visar <code>exempt_small_business</code>-noten — <b>aldrig</b> härlett ur <code>rate==0</code> (#36). Vid registrering byts noten mot en momssats-tabell utan att något migreras."],
+    ["Ångerrätt per rad","<code>withdrawalRight</code> snapshotas per rad (#50). Specialtillverkat = undantaget; lagervara = 14 dagar; reklamation 3 år alltid."],
+    ["Platshållare","Allt <span class='ph'>rastrerat</span> är verklig data butiksägaren fyller i (företagsnamn, org.nr, adresser, kontakt). Frusen i orderns locale (#49)."]
+  ],
+  partial: [
+    ["Inget ensidigt beslut mot kund","Ägardirektiv: vid översäljning lovar vi <b>inget</b> färdigt utfall. Notisen säger att vi hör av oss och bestämmer <b>tillsammans</b> — delleverans vs. full återbetalning — eftersom kunden kanske inte vill ha en delvis order alls."],
+    ["Kvittot står kvar som debiterat","Kvittot renderas vid <code>paid</code> (#49) och visar hela ordern som den faktiskt debiterats — inga justerade summor. En ev. överenskommen återbetalning blir en separat kreditering efteråt, inte en ändring av detta kvitto."],
+    ["Per rad","Översäljning flaggas <b>per rad</b> (#34/#35); bara den berörda raden och en gul notis skiljer från vanliga bekräftelsen."]
+  ],
+  shipped: [
+    ["Kort och gated","Skickas när <code>shipped_email_sent_at IS NULL</code> (#35). Bär spårningslänk + transportör (#37)."],
+    ["Vad togs med?","Utkastet upprepar raderna så kunden ser vad som är på väg. Onödigt? Räcker referensen? Reagera gärna."]
+  ],
+  alert: [
+    ["Internt, ägarens språk","Butiksägar-mejlet är inte kundvänt, så det följer <b>ägarens</b> språk — inte orderns frusna locale (#49). Här visat i båda för granskning."],
+    ["Leder till handling","Länkar till <code>/admin/orders/[ref]</code> (#37) och listar exakt vad som ska göras: manuell Stripe-återbetalning, lagerkoll, ev. kundkontakt."],
+    ["Avgränsning","Detta är översälj-alarmet. Andra ägar-alarm (t.ex. föräldralöst betal-event, #51) är egna mejl utanför den här ticketen."]
+  ]
+};
+
+/* ============================ wiring ============================ */
+let lang = "sv", mail = "confirm";
+const envEl = document.getElementById("env");
+const emailEl = document.getElementById("email");
+const notesEl = document.getElementById("notes");
+
+function render() {
+  const e = T[lang].env[mail];
+  const L = lang==="sv"
+    ? {from:"Från", to:"Till", subj:"Ämne", pre:"Förhandsvisning"}
+    : {from:"From", to:"To", subj:"Subject", pre:"Preheader"};
+  envEl.innerHTML = `
+    <dt>${L.from}</dt><dd>${e.from}</dd>
+    <dt>${L.to}</dt><dd>${e.to}</dd>
+    <dt>${L.subj}</dt><dd class="subj">${e.subj}</dd>
+    <dt>${L.pre}</dt><dd class="pre">${e.pre}</dd>`;
+
+  if (mail==="confirm") emailEl.innerHTML = buildConfirm(lang,false);
+  else if (mail==="partial") emailEl.innerHTML = buildConfirm(lang,true);
+  else if (mail==="shipped") emailEl.innerHTML = buildShipped(lang);
+  else emailEl.innerHTML = buildAlert(lang);
+
+  notesEl.innerHTML = NOTES[mail].map(([h,p]) => `<div class="note"><h4>${h}</h4><p>${p}</p></div>`).join("");
+
+  document.getElementById("lead-h").textContent =
+    ({confirm:{sv:"Orderbekräftelse & kvitto",en:"Order confirmation & receipt"},
+      partial:{sv:"Delvis levererbar order",en:"Partially fulfillable order"},
+      shipped:{sv:"Leveransbesked",en:"Shipping notification"},
+      alert:{sv:"Butiksägare: översålt",en:"Shopkeeper: oversold alert"}})[mail][lang];
+  document.getElementById("lead-p").innerHTML = lang==="sv"
+    ? `Utkast — allt inom <span class="ph">rastrerat</span> är platshållare butiksägaren fyller i.`
+    : `Draft — anything <span class="ph">hatched</span> is a placeholder the shopkeeper fills in.`;
+}
+
+document.getElementById("lang").addEventListener("click", ev => {
+  const b = ev.target.closest("button"); if (!b) return;
+  lang = b.dataset.lang;
+  document.querySelectorAll("#lang button").forEach(x => x.setAttribute("aria-pressed", x===b));
+  render();
+});
+document.getElementById("mail").addEventListener("click", ev => {
+  const b = ev.target.closest("button"); if (!b) return;
+  mail = b.dataset.mail;
+  document.querySelectorAll("#mail button").forEach(x => x.setAttribute("aria-pressed", x===b));
+  render();
+});
+render();
+</script>
