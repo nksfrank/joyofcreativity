@@ -9,6 +9,9 @@ src/i18n/
 node_modules/
 test-results/
 
+# throwaway spikes / scratch (see effect-cf-spike)
+scratchpad/
+
 # logs
 npm-debug.log*
 yarn-debug.log*

@@ -55,3 +55,6 @@ rendered as that many required selector fields.
 - **Per-slot roles / minimum-distinct-colours** — positional meaning (body vs trim) or a
   "≥ K distinct" constraint. Rejected: fields are an order-insignificant multiset with duplicates
   allowed; roles are out of scope for this feature.
+- **Distinct colour per field** — force all N picks to differ. Rejected: it would make a family
+  unbuildable when it has fewer than N available yarns and block single-option auto-fill of later
+  fields.

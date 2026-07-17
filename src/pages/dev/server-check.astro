@@ -1,0 +1,25 @@
+---
+// On-demand rendered (ADR-0013): the site is `output: "static"`, and a route
+// becomes dynamic only through this explicit opt-in. A fresh timestamp on each
+// request proves this page is genuinely server-rendered per request, not
+// statically cached. Unlinked from the storefront — reach it by direct URL in
+// `astro dev`. Not customer-facing; a scaffold for the server surface (#57).
+export const prerender = false;
+
+import ServerCheck from "@/components/ServerCheck.tsx";
+
+const renderedAt = new Date().toISOString();
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <title>Server surface check</title>
+  </head>
+  <body>
+    <h1>Server surface check</h1>
+    <p data-testid="rendered-at">{renderedAt}</p>
+    <ServerCheck client:load />
+  </body>
+</html>

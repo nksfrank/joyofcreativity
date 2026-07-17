@@ -54,8 +54,8 @@ Use these terms verbatim in code, tests, issues, and docs. Avoid the listed syno
 - **Single-alternative attribute** *(new)* — an attribute the family defines with exactly one
   option. The configurator **auto-selects** it (the control stays visible and interactive), so a
   customer never picks a choice that has no alternative. Triggered by the *structural* count only,
-  never by feasibility leaving one option enabled. A sole colour hides its switcher `<nav>` since
-  there is nothing to navigate to. See ADR-0010.
+  never by feasibility leaving one option enabled. See ADR-0010. A sole colour hides its switcher
+  `<nav>` since there is nothing to navigate to — see ADR-0011.
 
 ## Money
 

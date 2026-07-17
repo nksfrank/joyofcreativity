@@ -1,4 +1,4 @@
-# 10. A sole-colour family hides its colour switcher
+# 11. A sole-colour family hides its colour switcher
 
 Status: Accepted
 
