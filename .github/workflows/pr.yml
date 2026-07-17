@@ -22,9 +22,8 @@ jobs:
 
       - run: npm ci
 
-      # paraglide output (src/i18n) is generated, not committed
-      - run: npm run i18n
+      # `pretest` runs `npm run i18n && cf-typegen`, bootstrapping the
+      # generated (gitignored) src/i18n before `check` loads astro.config.
+      - run: npm test
 
       - run: npm run check
-
-      - run: npm test
