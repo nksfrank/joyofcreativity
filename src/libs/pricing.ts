@@ -77,9 +77,24 @@ export class PricingManager {
   }
 }
 
-// SEK and EUR both use 2 decimal places; revisit this divisor if a zero-decimal currency is added.
+// SEK and EUR both use 2 decimal places; revisit if a zero-decimal currency is added.
+const MINOR_UNITS_PER_MAJOR = 100;
+const MAJOR_UNIT_DECIMALS = Math.log10(MINOR_UNITS_PER_MAJOR);
+
+/** The price in major units (e.g. 79900 öre → 799). */
+const toMajorUnits = (price: Price): number =>
+  price.amount / MINOR_UNITS_PER_MAJOR;
+
 export const formatMoney = (price: Price, locale: Locale): string =>
   new Intl.NumberFormat(locale, {
     style: "currency",
     currency: price.currency,
-  }).format(price.amount / 100);
+  }).format(toMajorUnits(price));
+
+/**
+ * The bare major-unit amount as a fixed-decimal string, e.g. "799.00" — no
+ * currency symbol or locale grouping. For machine formats (schema.org / JSON-LD)
+ * that carry the currency separately; use formatMoney for human display.
+ */
+export const formatPriceAmount = (price: Price): string =>
+  toMajorUnits(price).toFixed(MAJOR_UNIT_DECIMALS);

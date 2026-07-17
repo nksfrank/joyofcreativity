@@ -3,6 +3,7 @@ import { render } from "astro:content";
 import Configurator from "@/components/Configurator.tsx";
 import SiteLayout from "@/components/layouts/SiteLayout.astro";
 import { getLocale } from "@/i18n/runtime";
+import { formatPriceAmount } from "@/libs/pricing";
 import { getProductById } from "@/libs/product";
 import { resolveSeoMeta } from "@/libs/product.utils";
 import {
@@ -48,7 +49,7 @@ const jsonLd = {
   image: page.image || undefined,
   offers: {
     "@type": "Offer",
-    price: (product.price.amount / 100).toFixed(2),
+    price: formatPriceAmount(product.price),
     priceCurrency: product.price.currency,
   },
 };
