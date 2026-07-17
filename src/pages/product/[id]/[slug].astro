@@ -1,5 +1,6 @@
 ---
 import { render } from "astro:content";
+import type { Product, WithContext } from "schema-dts";
 import Configurator from "@/components/Configurator.tsx";
 import SiteLayout from "@/components/layouts/SiteLayout.astro";
 import { getLocale } from "@/i18n/runtime";
@@ -39,14 +40,15 @@ const seo = resolveSeoMeta(page);
 const entry = await getProductDetailEntry(page.id);
 const Body = entry ? (await render(entry)).Content : undefined;
 
-// Product structured data: marketing text from the collection, price from the
-// code-defined structural model (never duplicated into content).
-const jsonLd = {
-  "@context": "https://schema.org/",
+// Product structured data (typed against schema.org via schema-dts): marketing
+// text from the collection, price from the code-defined structural model (never
+// duplicated into content).
+const jsonLd: WithContext<Product> = {
+  "@context": "https://schema.org",
   "@type": "Product",
   name: page.name,
   description: seo.description,
-  image: page.image || undefined,
+  ...(page.image ? { image: page.image } : {}),
   offers: {
     "@type": "Offer",
     price: formatPriceAmount(product.price),
