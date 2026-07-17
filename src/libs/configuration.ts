@@ -1,4 +1,5 @@
 import { AvailabilityManager } from "./availability";
+import type { StockSnapshot } from "./blank.types";
 import { type BlankOption, resolveBlankOptionsByProduct } from "./blank.utils";
 import { type Price, PricingManager } from "./pricing";
 import type {
@@ -75,9 +76,10 @@ export class ConfigurationModel {
   constructor(
     private readonly definition: ProductDefinition,
     private readonly colorId: string,
+    private readonly stock: StockSnapshot,
     selection: Partial<Selection> = {},
   ) {
-    this.availability = new AvailabilityManager(definition);
+    this.availability = new AvailabilityManager(definition, stock);
     this.pricing = new PricingManager(definition);
     this.selection = {
       yarnColorIds: [],
@@ -112,7 +114,7 @@ export class ConfigurationModel {
     return this.blanksForColour().map((option) => ({
       id: option.size.id,
       label: option.size.name,
-      disabled: option.stock <= 0,
+      disabled: (this.stock.get(option.blankId) ?? 0) <= 0,
     }));
   }
 

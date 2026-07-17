@@ -1,5 +1,6 @@
 import { useState } from "preact/hooks";
 import type { Locale } from "@/i18n/runtime";
+import { fixtureStockSnapshot } from "@/libs/blank.utils";
 import {
   ConfigurationModel,
   type OptionView,
@@ -65,10 +66,13 @@ export default function Configurator({
     ConfigurationModel.defaultSelection(definition, colorId),
   );
 
-  // The model is a pure projection of (definition, colorId, selection) — a
+  // The model is a pure projection of (definition, colorId, stock, selection) — a
   // derived value, not state. Construction is cheap and its identity is never a
   // hook/child dependency, so it's built inline each render rather than memoised.
-  const model = new ConfigurationModel(definition, colorId, selection);
+  // Stock is now an explicit input (#58): today from the fixture, later a live
+  // client snapshot or server read fed in with no behaviour change.
+  const stock = fixtureStockSnapshot(definition);
+  const model = new ConfigurationModel(definition, colorId, stock, selection);
 
   const sizeOptions = model.sizeOptions();
   const patternOptions = model.patternOptions();
