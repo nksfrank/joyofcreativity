@@ -16,7 +16,7 @@ type Pattern = {
   priceModifier: PriceModifier;
 };
 
-type YarnColor = {
+export type YarnColor = {
   id: string;
   name: string;
   available: boolean;
