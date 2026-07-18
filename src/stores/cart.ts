@@ -1,6 +1,6 @@
 import { persistentAtom } from "@nanostores/persistent";
 import { computed } from "nanostores";
-import type { Price } from "@/libs/pricing";
+import { Money, type Price } from "@/libs/money";
 import type { ProductOrderItem } from "@/libs/product.types";
 
 /** Resolved labels captured at add-time so the cart renders without catalogue lookup (ADR-0007). */
@@ -62,17 +62,20 @@ export const mergeLine = (
 export const cartCount = (lines: CartLine[]): number =>
   lines.reduce((total, line) => total + line.quantity, 0);
 
-/** Running total computed from the line snapshots alone; null for an empty cart. */
-export const cartTotal = (lines: CartLine[]): Price | null => {
+/**
+ * Running total computed from the line snapshots alone; null for an empty cart.
+ * Sums through `Money`, so a cart mixing currencies throws rather than silently
+ * totalling in the first line's currency.
+ */
+export const cartTotal = (lines: CartLine[]): Money | null => {
   const first = lines.at(0);
   if (!first) {
     return null;
   }
-  const amount = lines.reduce(
-    (total, line) => total + line.price.amount * line.quantity,
-    0,
+  return lines.reduce(
+    (total, line) => total.add(Money.from(line.price).times(line.quantity)),
+    Money.zero(first.price.currency),
   );
-  return { amount, currency: first.price.currency };
 };
 
 /** The persisted cart, shared across islands (ADR-0001, ADR-0008). */

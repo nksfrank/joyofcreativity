@@ -1,7 +1,8 @@
 import { AvailabilityManager } from "./availability";
 import type { StockSnapshot } from "./blank.types";
 import type { BlankOption } from "./blank.utils";
-import { type Price, PricingManager } from "./pricing";
+import type { Price } from "./money";
+import { PricingManager } from "./pricing";
 import type {
   CustomisationRule,
   PatternVariant,

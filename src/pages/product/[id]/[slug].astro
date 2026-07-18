@@ -4,7 +4,7 @@ import type { Product, WithContext } from "schema-dts";
 import Configurator from "@/components/Configurator.tsx";
 import SiteLayout from "@/components/layouts/SiteLayout.astro";
 import { getLocale } from "@/i18n/runtime";
-import { formatPriceAmount } from "@/libs/pricing";
+import { Money } from "@/libs/money";
 import { getProductById } from "@/libs/product";
 import { resolveSeoMeta } from "@/libs/product.utils";
 import {
@@ -51,7 +51,7 @@ const jsonLd: WithContext<Product> = {
   ...(page.image ? { image: page.image } : {}),
   offers: {
     "@type": "Offer",
-    price: formatPriceAmount(product.price),
+    price: Money.from(product.price).amountString(),
     priceCurrency: product.price.currency,
   },
 };
