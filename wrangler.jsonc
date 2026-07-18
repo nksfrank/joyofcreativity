@@ -21,15 +21,15 @@
   // creation time — `wrangler d1 create joyofcreativity --location weur` — not
   // here; there is no region field on the binding. EU storage keeps GDPR
   // third-country transfer and Bokföringslagen abroad-storage a non-issue.
-  // `database_id` below is a placeholder: replace it with the id `wrangler d1
-  // create` prints (or `wrangler d1 list`) before deploying. Migrations are
-  // authored by `drizzle-kit generate` and applied by `wrangler d1 migrations
-  // apply` (see the `db:*` npm scripts, ADR-0015, and CONTEXT.md → Database).
+  // `database_id` below is the real database `wrangler d1 create` provisioned
+  // (confirm with `wrangler d1 list`). Migrations are authored by `drizzle-kit
+  // generate` and applied by `wrangler d1 migrations apply` (see the `db:*` npm
+  // scripts, ADR-0015, and CONTEXT.md → Database).
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "joyofcreativity",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "3e3ce271-caa2-4700-a037-494f3f47bda6",
       "migrations_dir": "drizzle/migrations",
     },
   ],
