@@ -62,6 +62,14 @@ Use these terms verbatim in code, tests, issues, and docs. Avoid the listed syno
 All prices are integer **minor units** (öre / cents) in a single `Price { amount, currency }`.
 Currencies: `SEK`, `EUR` (both 2-decimal). Never store fractional major-unit values.
 
+`Price` is the *serialized* shape (snapshots, content, Stripe). Arithmetic and
+formatting live on the **`Money`** value object (`src/libs/money.ts`), which owns the
+minor-unit representation, rounding, and a currency-mismatch guard: `Money.from(price)`
+to lift a record, `add`/`times` to combine (mixing currencies throws), `format(locale)`
+for human display, `amountString()` for machine formats, `toPrice()` back to a record.
+Pricing math, cart totals, and every display path go through `Money` — nothing
+re-derives minor units.
+
 ## Database
 
 The shop's durable memory is a **Cloudflare D1** database (binding `DB`, region `weur` — EU),

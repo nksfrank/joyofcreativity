@@ -1,6 +1,6 @@
 import { Context, Data, Effect, Layer } from "effect";
 import StripeSdk from "stripe";
-import type { Price } from "@/libs/pricing";
+import type { Price } from "@/libs/money";
 
 /**
  * Stripe adapter port (issue #61, ADR-0013/0014).

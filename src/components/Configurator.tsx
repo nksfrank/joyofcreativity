@@ -6,7 +6,7 @@ import {
   type OptionView,
   type Selection,
 } from "@/libs/configuration";
-import { formatMoney } from "@/libs/pricing";
+import { Money } from "@/libs/money";
 import type { ProductDefinition } from "@/libs/product.types";
 import { addLine } from "@/stores/cart";
 
@@ -184,7 +184,7 @@ export default function Configurator({
       )}
 
       <p data-testid="product-price">
-        {price ? formatMoney(price, locale) : "Select a size and pattern"}
+        {price ? Money.from(price).format(locale) : "Select a size and pattern"}
       </p>
 
       <button type="button" onClick={addToCart} disabled={!orderItem}>

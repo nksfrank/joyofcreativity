@@ -1,4 +1,4 @@
-import type { Price, PriceModifier } from "./pricing";
+import type { Price, PriceModifier } from "./money";
 
 //* Attributes */
 
