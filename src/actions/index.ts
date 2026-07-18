@@ -6,6 +6,8 @@ import { env } from "cloudflare:workers";
 import { z } from "astro/zod";
 import { Cause, Effect, Exit, Layer } from "effect";
 import { isParseError, TreeFormatter } from "effect/ParseResult";
+import { createDb, Database } from "@/server/db/client";
+import { getStockForProduct } from "@/server/db/stock";
 import { greet, ServerEnv } from "@/server/greeting";
 
 /**
@@ -47,6 +49,52 @@ export const server = {
       throw new ActionError({
         code: "INTERNAL_SERVER_ERROR",
         message: "Greeting failed unexpectedly",
+      });
+    },
+  }),
+
+  /**
+   * Live stock for a product family (#62): the configurator calls this once on
+   * mount to feed the `ConfigurationModel`'s snapshot from D1 — the store the
+   * shop controls — rather than a code constant. Thin boundary (ADR-0013): the
+   * resolve-then-read lives in `getStockForProduct`; this only validates the wire
+   * shape, provides the D1 layer from the `DB` binding, and translates failures.
+   *
+   * The snapshot is advisory (ADR-0003): the client still prices and feasibility-
+   * checks instantly against it, so there is no server round-trip per selection.
+   * The returned `Map<blankId, onHand>` is what `StockSnapshot` consumes verbatim.
+   */
+  getStock: defineAction({
+    input: z.object({
+      productId: z.string(),
+    }),
+    handler: async ({ productId }) => {
+      const dbLayer = Layer.succeed(Database, createDb(env.DB));
+
+      const exit = await Effect.runPromiseExit(
+        Effect.provide(getStockForProduct(productId), dbLayer),
+      );
+
+      if (Exit.isSuccess(exit)) {
+        return exit.value;
+      }
+
+      // An unknown product is the caller's bad id → 404; a StockReadError (or any
+      // other failure) is infrastructure → 500. Same `Cause.failureOption`
+      // translation shape as `greet`.
+      const failure = Cause.failureOption(exit.cause);
+      if (
+        failure._tag === "Some" &&
+        failure.value._tag === "ProductNotFoundError"
+      ) {
+        throw new ActionError({
+          code: "NOT_FOUND",
+          message: `Unknown product ${productId}`,
+        });
+      }
+      throw new ActionError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to read stock",
       });
     },
   }),

@@ -85,6 +85,14 @@ See ADR-0015 for the full contract. A cold-starting agent needs these facts:
 - **The one table so far: `stock`.** One row per **Blank**: `blank_id` (PK) and `on_hand` (a
   non-negative integer — a table CHECK enforces `on_hand >= 0`). Stock lives here because it is
   shared inventory. Reservation/decrement columns are **not** here — they belong to #34/#35.
+- **Live stock reaches the client (#62).** `getOnHandForBlanks` (`stock.ts`) reads a
+  `StockSnapshot` (`Map<blankId, onHand>`) for a set of Blanks — the read path the checkout
+  boundary will reuse. The `getStock(productId)` Action (`src/actions/`) resolves the product
+  family's blanks (isomorphic `getProductById`) and returns that snapshot; the configurator calls
+  it once on mount and feeds it to the `ConfigurationModel`. The snapshot is **advisory**
+  (ADR-0003): the client still prices and feasibility-checks instantly against it — no server
+  round-trip per selection. The fixture `Blank.stock` field is read by nobody now; its removal is
+  the follow-up contract step.
 - **Authoring ≠ application.** `npm run db:generate` (drizzle-kit) **authors** plain-SQL migrations
   into `drizzle/migrations`; `npm run db:migrate:local` / `db:migrate:remote` (wrangler)
   **apply** them. Never hand-edit a generated schema migration; add a `drizzle-kit generate
