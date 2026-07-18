@@ -1,6 +1,7 @@
-import { useState } from "preact/hooks";
+import { actions } from "astro:actions";
+import { useEffect, useState } from "preact/hooks";
 import type { Locale } from "@/i18n/runtime";
-import { fixtureStockSnapshot } from "@/libs/blank.utils";
+import type { StockSnapshot } from "@/libs/blank.types";
 import {
   ConfigurationModel,
   type OptionView,
@@ -66,12 +67,53 @@ export default function Configurator({
     ConfigurationModel.defaultSelection(definition, colorId),
   );
 
+  // Stock is the live D1 read, fetched once on mount (#62) — the store the shop
+  // controls, not a code constant. `null` until it arrives; the snapshot is
+  // advisory (ADR-0003), so once loaded every selection prices/feasibility-checks
+  // instantly against it with no further round-trip. An Action error resolves to
+  // an empty snapshot rather than sitting on "Loading…" forever.
+  const [stock, setStock] = useState<StockSnapshot | null>(null);
+  useEffect(() => {
+    let active = true;
+    actions
+      .getStock({ productId: definition.id })
+      .then(({ data, error }) => {
+        if (!active) return;
+        setStock(error ? new Map() : data);
+      })
+      .catch(() => {
+        if (active) setStock(new Map());
+      });
+    return () => {
+      active = false;
+    };
+  }, [definition.id]);
+
+  const update = (partial: Partial<Selection>) =>
+    setSelection((prev) => ({ ...prev, ...partial }));
+
+  // Yarn is one required select per field (ADR-0009); writing a field's pick by
+  // index keeps duplicates across fields and leaves other fields untouched.
+  const selectYarn = (index: number, id: string) =>
+    setSelection((prev) => {
+      const yarnColorIds = [...prev.yarnColorIds];
+      yarnColorIds[index] = id;
+      return { ...prev, yarnColorIds };
+    });
+
+  // Before the snapshot lands there is no availability to project, so the island
+  // shows a loading state rather than guessing (a fixture read is gone, #62).
+  if (stock === null) {
+    return (
+      <section aria-label="Configure">
+        <p>Loading availability…</p>
+      </section>
+    );
+  }
+
   // The model is a pure projection of (definition, colorId, stock, selection) — a
   // derived value, not state. Construction is cheap and its identity is never a
   // hook/child dependency, so it's built inline each render rather than memoised.
-  // Stock is now an explicit input (#58): today from the fixture, later a live
-  // client snapshot or server read fed in with no behaviour change.
-  const stock = fixtureStockSnapshot(definition);
   const model = new ConfigurationModel(definition, colorId, stock, selection);
 
   // One projection, one seam (ADR-0005): the island reads every field list, the
@@ -86,18 +128,6 @@ export default function Configurator({
     deadEnd,
     ready,
   } = model.view();
-
-  const update = (partial: Partial<Selection>) =>
-    setSelection((prev) => ({ ...prev, ...partial }));
-
-  // Yarn is one required select per field (ADR-0009); writing a field's pick by
-  // index keeps duplicates across fields and leaves other fields untouched.
-  const selectYarn = (index: number, id: string) =>
-    setSelection((prev) => {
-      const yarnColorIds = [...prev.yarnColorIds];
-      yarnColorIds[index] = id;
-      return { ...prev, yarnColorIds };
-    });
 
   const resetDeadEnd = () => {
     if (deadEnd) {
