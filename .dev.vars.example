@@ -1,0 +1,9 @@
+# Local-only secrets for `astro dev` / `wrangler dev`. Copy to `.dev.vars`
+# (gitignored) and fill in real test-mode values. Never commit real secrets;
+# in production these are set with `wrangler secret put`.
+
+# Stripe test-mode secret key (issue #61). MUST be a restricted test key
+# (starts with `sk_test_`). Read server-side only, via
+# `import { env } from "cloudflare:workers"` (ADR-0013/0014), and handed to the
+# Stripe adapter port in src/server/stripe.ts. Never expose it to the client.
+STRIPE_SECRET_KEY="sk_test_replace_me"
