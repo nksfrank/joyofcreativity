@@ -23,11 +23,15 @@ jobs:
 
       - run: npm ci
 
-      # runs `prebuild` (npm run i18n) then `astro build`
+      # Separate build step (cacheable; leaves room for build-artifact tests
+      # later). Runs `prebuild` (npm run i18n) then `astro build`.
       - run: npm run build
 
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+      # migrate → seed-sync → deploy, defined once in package.json `deploy:ci`
+      # so humans (`npm run deploy`) and CI ship the same way. wrangler reads
+      # its credentials from these env vars — the remote D1 migrate/seed steps
+      # require the API token to carry the D1 Edit permission, not just Workers.
+      - run: npm run deploy:ci
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

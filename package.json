@@ -26,7 +26,8 @@
     "db:seed-sync": "node --experimental-strip-types scripts/seed-sync.ts",
     "db:seed-sync:local": "node --experimental-strip-types scripts/seed-sync.ts > drizzle/seed-sync.sql && wrangler d1 execute joyofcreativity --local --file drizzle/seed-sync.sql",
     "db:seed-sync:remote": "node --experimental-strip-types scripts/seed-sync.ts > drizzle/seed-sync.sql && wrangler d1 execute joyofcreativity --remote --file drizzle/seed-sync.sql",
-    "deploy": "npm run build && npm run db:migrate:remote && npm run db:seed-sync:remote && wrangler deploy",
+    "deploy:ci": "npm run db:migrate:remote && npm run db:seed-sync:remote && wrangler deploy",
+    "deploy": "npm run build && npm run deploy:ci",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
