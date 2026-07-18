@@ -2,6 +2,8 @@
 dist/
 # generated types
 .astro/
+# generated deploy seed-sync SQL (rebuilt from code by db:seed-sync)
+drizzle/seed-sync.sql
 # generated i18n (paraglide compile output)
 src/i18n/
 

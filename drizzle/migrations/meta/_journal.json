@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1784356259653,
+      "tag": "0000_create_stock",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784356274273,
+      "tag": "0001_seed_stock",
+      "breakpoints": true
+    }
+  ]
+}

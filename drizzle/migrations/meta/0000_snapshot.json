@@ -1,0 +1,48 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "8c83ea46-c9ba-430b-a339-de42817e77e7",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "stock": {
+      "name": "stock",
+      "columns": {
+        "blank_id": {
+          "name": "blank_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "on_hand": {
+          "name": "on_hand",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "stock_on_hand_non_negative": {
+          "name": "stock_on_hand_non_negative",
+          "value": "\"stock\".\"on_hand\" >= 0"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

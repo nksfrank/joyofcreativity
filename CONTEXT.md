@@ -61,3 +61,34 @@ Use these terms verbatim in code, tests, issues, and docs. Avoid the listed syno
 
 All prices are integer **minor units** (öre / cents) in a single `Price { amount, currency }`.
 Currencies: `SEK`, `EUR` (both 2-decimal). Never store fractional major-unit values.
+
+## Database
+
+The shop's durable memory is a **Cloudflare D1** database (binding `DB`, region `weur` — EU),
+accessed through **one runtime driver everywhere**: `drizzle-orm/d1` over a real D1 binding.
+See ADR-0015 for the full contract. A cold-starting agent needs these facts:
+
+- **Where it lives.** Schema in `src/server/db/schema.ts`; the Drizzle client constructor
+  `createDb(binding)` and the `Database` service tag in `client.ts`; reads/writes in sibling
+  modules (e.g. `stock.ts`). Repos are Effect programs (ADR-0014): they declare the `Database`
+  requirement and the caller — an Action reading `env.DB` via `import { env } from
+  "cloudflare:workers"` (ADR-0013), **not** the removed `Astro.locals.runtime.env` — provides
+  `Layer.succeed(Database, createDb(env.DB))`.
+- **The one table so far: `stock`.** One row per **Blank**: `blank_id` (PK) and `on_hand` (a
+  non-negative integer — a table CHECK enforces `on_hand >= 0`). Stock lives here because it is
+  shared inventory. Reservation/decrement columns are **not** here — they belong to #34/#35.
+- **Authoring ≠ application.** `npm run db:generate` (drizzle-kit) **authors** plain-SQL migrations
+  into `drizzle/migrations`; `npm run db:migrate:local` / `db:migrate:remote` (wrangler)
+  **apply** them. Never hand-edit a generated schema migration; add a `drizzle-kit generate
+  --custom` migration for data changes so the journal stays consistent.
+- **Seeding.** Fixture numbers ship as data migration `0001_seed_stock.sql`. Drift is closed by the
+  **deploy seed-sync** (`seed.ts` → `buildSeedSyncSql`, run by `db:seed-sync:remote`, wired into
+  `deploy`): it upserts `on_hand = 0` for any code-defined Blank with no row and never touches an
+  existing row. So adding a Blank in `src/libs/blank.ts` reaches D1 on the next deploy.
+- **Tests run against a real D1.** `src/server/db/**` tests use `@cloudflare/vitest-pool-workers`
+  (a real, per-test-isolated migrated D1) as the `workers` vitest project; pure-engine/store tests
+  stay on the fast `node` project. `npm test` runs both.
+- **First-time setup.** `wrangler d1 create joyofcreativity --location weur`, put the printed id in
+  `wrangler.jsonc` (`database_id`, currently a placeholder), then `npm run db:migrate:local`.
+  `npm run db:studio` opens Drizzle Studio against remote D1 (needs `CLOUDFLARE_ACCOUNT_ID` /
+  `CLOUDFLARE_DATABASE_ID` / `CLOUDFLARE_D1_TOKEN`).
