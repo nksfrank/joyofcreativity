@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { Price } from "@/libs/pricing";
-import { type AddLineInput, lineIdentity, mergeLine } from "./cart";
+import type { Price } from "@/libs/money";
+import {
+  type AddLineInput,
+  type CartLine,
+  cartTotal,
+  lineIdentity,
+  mergeLine,
+} from "./cart";
 
 const price: Price = { amount: 15000, currency: "SEK" };
 
@@ -86,6 +92,29 @@ describe("mergeLine", () => {
       input({ customisation: "CD" }),
     );
     expect(lines).toHaveLength(2);
+  });
+});
+
+const line = (over: Partial<CartLine> = {}): CartLine => ({
+  ...baseInput,
+  quantity: 1,
+  ...over,
+});
+
+describe("cartTotal", () => {
+  it("is null for an empty cart", () => {
+    expect(cartTotal([])).toBeNull();
+  });
+
+  it("sums each line's price weighted by its quantity", () => {
+    // 15000 × 2 + 15000 × 1 = 45000.
+    const total = cartTotal([line({ quantity: 2 }), line()]);
+    expect(total?.toPrice()).toEqual({ amount: 45000, currency: "SEK" });
+  });
+
+  it("throws on a mixed-currency cart instead of totalling silently", () => {
+    const eur = line({ price: { amount: 15000, currency: "EUR" } });
+    expect(() => cartTotal([line(), eur])).toThrow(/currenc/i);
   });
 });
 

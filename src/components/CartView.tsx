@@ -1,6 +1,6 @@
 import { useStore } from "@nanostores/preact";
 import type { Locale } from "@/i18n/runtime";
-import { formatMoney } from "@/libs/pricing";
+import { Money } from "@/libs/money";
 import { cart, cartTotal, lineIdentity } from "@/stores/cart";
 
 type Props = {
@@ -50,15 +50,14 @@ export default function CartView({ locale }: Props) {
               <dd data-testid="cart-line-item-quantity">{line.quantity}</dd>
             </dl>
             <span data-testid="cart-line-item-price">
-              {formatMoney(line.price, locale)}
+              {Money.from(line.price).format(locale)}
             </span>
           </li>
         ))}
       </ul>
       {total && (
         <p>
-          Total:{" "}
-          <span data-testid="cart-total">{formatMoney(total, locale)}</span>
+          Total: <span data-testid="cart-total">{total.format(locale)}</span>
         </p>
       )}
     </div>
