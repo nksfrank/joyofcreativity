@@ -74,6 +74,20 @@ export class Catalogue {
   }
 
   /**
+   * The blank joined with its colour and size — tolerant: a dangling blank,
+   * colour, or size yields `undefined` (the join for lists that skip bad ids).
+   */
+  getBlankOption(id: string): BlankOption | undefined {
+    const blank = this.getBlank(id);
+    const color = blank && this.getColor(blank.colorId);
+    const size = blank && this.getSize(blank.sizeId);
+    if (!blank || !color || !size) {
+      return undefined;
+    }
+    return { blankId: blank.id, color, size };
+  }
+
+  /**
    * Human-readable label for a blank, e.g. "Cream Small". Tolerant of missing
    * parts (an unknown colour or size is simply omitted from the label).
    */
