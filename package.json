@@ -39,7 +39,8 @@
     "drizzle-orm": "0.45.2",
     "effect": "3.22.0",
     "nanostores": "1.4.0",
-    "preact": "10.29.7"
+    "preact": "10.29.7",
+    "stripe": "22.3.2"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.9",

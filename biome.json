@@ -73,6 +73,10 @@
                       "**/stores/**"
                     ],
                     "message": "src/libs/ is the isomorphic domain core (ADR-0013) and must not import from server/, actions/, components/, or stores/. A need for this is the smell that server-only concern has leaked into the core — move the shared code into libs/ or utils/, or invert the dependency."
+                  },
+                  {
+                    "group": ["stripe", "stripe/**"],
+                    "message": "src/libs/ is the isomorphic domain core (ADR-0013) and must never import the Stripe SDK — it is server-only and would drag Stripe (and secrets) toward the client bundle. Server code talks to Stripe through the adapter port in src/server/stripe.ts (issue #61)."
                   }
                 ]
               }
