@@ -1,6 +1,9 @@
 # 4. Cart lines snapshot the price at add-time
 
-Status: Accepted
+Status: Superseded by ADR-0016 — the stored snapshot is now the server-validated price, locked by a
+signed quote. The snapshot shape and stable-display rationale below still hold; only its *source*
+changed from browser-computed to server-authoritative, and reconciliation moved earlier (add-time)
+rather than only at checkout.
 
 ## Context
 

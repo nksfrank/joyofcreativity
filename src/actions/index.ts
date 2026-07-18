@@ -6,6 +6,8 @@ import { env } from "cloudflare:workers";
 import { z } from "astro/zod";
 import { Cause, Effect, Exit, Layer } from "effect";
 import { isParseError, TreeFormatter } from "effect/ParseResult";
+import { validateCheckout } from "@/server/checkout/checkout";
+import { quoteSignerFromEnv } from "@/server/checkout/checkout.env";
 import { createDb, Database } from "@/server/db/client";
 import { getStockForProduct } from "@/server/db/stock";
 import { greet, ServerEnv } from "@/server/greeting";
@@ -95,6 +97,64 @@ export const server = {
       throw new ActionError({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to read stock",
+      });
+    },
+  }),
+
+  /**
+   * The first authoritative checkpoint (#64, trust boundary #33). The client
+   * POSTs a trust-minimal cart — `{ productId, item, quantity }[]`, no price and
+   * no display — and the server re-prices it with the shared engines, re-checks
+   * every line against the catalog and live D1 stock, and returns either all
+   * problems at once (four buckets) or a signed quote (the price lock, ADR-0016).
+   *
+   * Thin boundary (ADR-0013): the zod `input` guards only the wire shape; the
+   * real domain validation, pricing, and signing live in `validateCheckout`. Two
+   * layers are provided per-invocation from `env` — the D1 `Database` and the
+   * live `QuoteSigner` over the `QUOTE_SIGNING_KEY` secret.
+   */
+  validateCheckout: defineAction({
+    input: z.object({
+      lines: z.array(
+        z.object({
+          productId: z.string(),
+          item: z.object({
+            blankId: z.string(),
+            patternId: z.string(),
+            yarnColorIds: z.array(z.string()),
+            customisation: z.string(),
+          }),
+          quantity: z.number(),
+        }),
+      ),
+    }),
+    handler: async (request) => {
+      const layer = Layer.merge(
+        Layer.succeed(Database, createDb(env.DB)),
+        quoteSignerFromEnv(),
+      );
+
+      const exit = await Effect.runPromiseExit(
+        Effect.provide(validateCheckout(request, Date.now()), layer),
+      );
+
+      if (Exit.isSuccess(exit)) {
+        return exit.value;
+      }
+
+      // A Schema decode error is a malformed cart → bad request; a StockReadError
+      // (or any other failure) is infrastructure → 500. Same translation shape as
+      // the other Actions.
+      const failure = Cause.failureOption(exit.cause);
+      if (failure._tag === "Some" && isParseError(failure.value)) {
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message: TreeFormatter.formatErrorSync(failure.value),
+        });
+      }
+      throw new ActionError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to validate checkout",
       });
     },
   }),

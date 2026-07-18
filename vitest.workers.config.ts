@@ -33,7 +33,12 @@ export default defineConfig(async () => {
     ],
     test: {
       name: "workers",
-      include: ["src/server/db/**/*.test.ts"],
+      // D1-backed tests run here against a real migrated D1: the db repo tests and
+      // the `validateCheckout` integration test, which reads live stock (#64).
+      include: [
+        "src/server/db/**/*.test.ts",
+        "src/server/checkout/**/*.workers.test.ts",
+      ],
       setupFiles: ["./src/server/db/test/apply-migrations.ts"],
     },
   };
