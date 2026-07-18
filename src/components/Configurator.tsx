@@ -74,14 +74,18 @@ export default function Configurator({
   const stock = fixtureStockSnapshot(definition);
   const model = new ConfigurationModel(definition, colorId, stock, selection);
 
-  const sizeOptions = model.sizeOptions();
-  const patternOptions = model.patternOptions();
-  const yarnFields = model.yarnFields();
-  const price = model.price();
-  const orderItem = model.orderItem();
-  const labels = model.orderItemLabels();
-  const deadEnd = model.deadEnd();
-  const rule = definition.customisation;
+  // One projection, one seam (ADR-0005): the island reads every field list, the
+  // customisation rule, the dead-end signal, and the priceable trio from this
+  // single record — never from the ProductDefinition. `ready` is non-null only
+  // when the selection is a complete, valid, in-stock order item.
+  const {
+    sizeOptions,
+    patternOptions,
+    yarnFields,
+    customisationRule: rule,
+    deadEnd,
+    ready,
+  } = model.view();
 
   const update = (partial: Partial<Selection>) =>
     setSelection((prev) => ({ ...prev, ...partial }));
@@ -102,22 +106,23 @@ export default function Configurator({
   };
 
   const addToCart = () => {
-    // orderItem is non-null only when the selection prices; labels resolve on the
-    // same condition. The model owns every domain label (ADR-0005); the island
-    // only adds the route-/prop-level colour and product name.
-    if (!orderItem || !price || !labels) {
+    // `ready` bundles the order item, price, and labels behind one invariant: it
+    // is non-null only when the selection prices. The model owns every domain
+    // label (ADR-0005); the island adds only the route-/prop-level colour and
+    // product name.
+    if (!ready) {
       return;
     }
     addLine({
       productId: definition.id,
-      item: orderItem,
-      price,
+      item: ready.orderItem,
+      price: ready.price,
       display: {
         productName,
         colour: colourName,
-        size: labels.size,
-        pattern: labels.pattern,
-        yarnColours: labels.yarnColours,
+        size: ready.labels.size,
+        pattern: ready.labels.pattern,
+        yarnColours: ready.labels.yarnColours,
         customisation: selection.customisation,
       },
     });
@@ -184,10 +189,12 @@ export default function Configurator({
       )}
 
       <p data-testid="product-price">
-        {price ? Money.from(price).format(locale) : "Select a size and pattern"}
+        {ready
+          ? Money.from(ready.price).format(locale)
+          : "Select a size and pattern"}
       </p>
 
-      <button type="button" onClick={addToCart} disabled={!orderItem}>
+      <button type="button" onClick={addToCart} disabled={!ready}>
         Add to cart
       </button>
 

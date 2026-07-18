@@ -3,6 +3,12 @@ import type { StockSnapshot } from "./blank.types";
 import { ConfigurationModel } from "./configuration";
 import type { PatternVariant, ProductDefinition } from "./product.types";
 
+// The priceable trio now lives behind one nullable `ready`; these read a single
+// member back as its own nullable so the null-until-ready assertions stay terse.
+const price = (model: ConfigurationModel) => model.view().ready?.price ?? null;
+const orderItem = (model: ConfigurationModel) =>
+  model.view().ready?.orderItem ?? null;
+
 const noModifier = { value: 0, type: "fixed" } as const;
 const yarnModifier = { value: 2000, type: "fixed" } as const;
 const plainModifier = { value: 5000, type: "fixed" } as const;
@@ -142,7 +148,7 @@ describe("ConfigurationModel.defaultSelection", () => {
 describe("ConfigurationModel.sizeOptions", () => {
   it("disables a size whose blank is out of stock", () => {
     const model = new ConfigurationModel(definition, "cream", stock);
-    const sizes = model.sizeOptions();
+    const sizes = model.view().sizeOptions;
 
     const large = sizes.find((s) => s.id === "large");
     const small = sizes.find((s) => s.id === "small");
@@ -161,7 +167,7 @@ describe("ConfigurationModel.sizeOptions", () => {
         ["blank3", 4],
       ]),
     );
-    const sizes = model.sizeOptions();
+    const sizes = model.view().sizeOptions;
 
     expect(sizes.find((s) => s.id === "small")?.disabled).toBe(true);
     expect(sizes.find((s) => s.id === "large")?.disabled).toBe(false);
@@ -171,7 +177,7 @@ describe("ConfigurationModel.sizeOptions", () => {
 describe("ConfigurationModel.patternOptions", () => {
   it("disables a pattern whose only compatible blank is out of stock", () => {
     const model = new ConfigurationModel(definition, "cream", stock);
-    const patterns = model.patternOptions();
+    const patterns = model.view().patternOptions;
 
     const festiveOption = patterns.find((p) => p.id === "festive");
     const plainOption = patterns.find((p) => p.id === "plain");
@@ -192,8 +198,8 @@ describe("ConfigurationModel.patternOptions", () => {
       ]),
     );
     const festiveOption = model
-      .patternOptions()
-      .find((p) => p.id === "festive");
+      .view()
+      .patternOptions.find((p) => p.id === "festive");
 
     expect(festiveOption?.disabled).toBe(false);
   });
@@ -201,7 +207,9 @@ describe("ConfigurationModel.patternOptions", () => {
   it("disables a pattern that requires yarn when no yarn colour is available", () => {
     // plain needs 2 yarns but nothing is available: no completion can fill it.
     const model = new ConfigurationModel(noYarnDefinition, "cream", stock);
-    const plainOption = model.patternOptions().find((p) => p.id === "plain");
+    const plainOption = model
+      .view()
+      .patternOptions.find((p) => p.id === "plain");
 
     expect(plainOption?.disabled).toBe(true);
   });
@@ -212,7 +220,9 @@ describe("ConfigurationModel.patternOptions", () => {
       "cream",
       stock,
     );
-    const plainOption = model.patternOptions().find((p) => p.id === "plain");
+    const plainOption = model
+      .view()
+      .patternOptions.find((p) => p.id === "plain");
 
     expect(plainOption?.disabled).toBe(false);
   });
@@ -221,7 +231,7 @@ describe("ConfigurationModel.patternOptions", () => {
 describe("ConfigurationModel.yarnFields", () => {
   it("has no fields until a pattern is chosen", () => {
     expect(
-      new ConfigurationModel(definition, "cream", stock).yarnFields(),
+      new ConfigurationModel(definition, "cream", stock).view().yarnFields,
     ).toEqual([]);
   });
 
@@ -230,14 +240,14 @@ describe("ConfigurationModel.yarnFields", () => {
       patternId: "plain",
     });
 
-    expect(model.yarnFields()).toEqual([]);
+    expect(model.view().yarnFields).toEqual([]);
   });
 
   it("exposes one field per required yarn colour, each offering all available yarns", () => {
     const model = new ConfigurationModel(definition, "cream", stock, {
       patternId: "plain",
     });
-    const fields = model.yarnFields();
+    const fields = model.view().yarnFields;
 
     expect(fields).toHaveLength(2);
     for (const field of fields) {
@@ -251,7 +261,7 @@ describe("ConfigurationModel.yarnFields", () => {
       patternId: "plain",
       yarnColorIds: ["red"],
     });
-    const fields = model.yarnFields();
+    const fields = model.view().yarnFields;
 
     expect(fields.at(0)?.selectedId).toBe("red");
     expect(fields.at(1)?.selectedId).toBeUndefined();
@@ -261,7 +271,7 @@ describe("ConfigurationModel.yarnFields", () => {
     const model = new ConfigurationModel(soleYarnDefinition, "cream", stock, {
       patternId: "plain",
     });
-    const fields = model.yarnFields();
+    const fields = model.view().yarnFields;
 
     expect(fields).toHaveLength(2);
     expect(fields.map((f) => f.selectedId)).toEqual(["red", "red"]);
@@ -272,11 +282,11 @@ describe("ConfigurationModel.price", () => {
   it("is null until both size and pattern are selected", () => {
     const model = new ConfigurationModel(definition, "cream", stock);
 
-    expect(model.price()).toBeNull();
+    expect(price(model)).toBeNull();
     expect(
-      new ConfigurationModel(definition, "cream", stock, {
-        sizeId: "small",
-      }).price(),
+      price(
+        new ConfigurationModel(definition, "cream", stock, { sizeId: "small" }),
+      ),
     ).toBeNull();
   });
 
@@ -287,7 +297,7 @@ describe("ConfigurationModel.price", () => {
       yarnColorIds: ["red"], // only one of the two required fields
     });
 
-    expect(model.price()).toBeNull();
+    expect(price(model)).toBeNull();
   });
 
   it("is null when a completed selection is not valid", () => {
@@ -298,7 +308,7 @@ describe("ConfigurationModel.price", () => {
       yarnColorIds: ["red", "blue"],
     });
 
-    expect(model.price()).toBeNull();
+    expect(price(model)).toBeNull();
   });
 
   it("reflects each filled yarn field, including a repeated colour", () => {
@@ -309,7 +319,10 @@ describe("ConfigurationModel.price", () => {
     });
 
     // base 10000 + plain 5000 + two red yarns at 2000 each.
-    expect(model.price()).toEqual({ amount: 19000, currency: "SEK" });
+    expect(price(model)).toEqual({
+      amount: 19000,
+      currency: "SEK",
+    });
   });
 
   it("prices an auto-resolved single-yarn pattern without an explicit pick", () => {
@@ -319,14 +332,17 @@ describe("ConfigurationModel.price", () => {
     });
 
     // both fields auto-resolve to red: base 10000 + plain 5000 + 2 x 2000.
-    expect(model.price()).toEqual({ amount: 19000, currency: "SEK" });
+    expect(price(model)).toEqual({
+      amount: 19000,
+      currency: "SEK",
+    });
   });
 });
 
 describe("ConfigurationModel.orderItem", () => {
   it("is null until the selection is complete", () => {
     expect(
-      new ConfigurationModel(definition, "cream", stock).orderItem(),
+      orderItem(new ConfigurationModel(definition, "cream", stock)),
     ).toBeNull();
   });
 
@@ -337,7 +353,7 @@ describe("ConfigurationModel.orderItem", () => {
       yarnColorIds: ["red"],
     });
 
-    expect(model.orderItem()).toBeNull();
+    expect(orderItem(model)).toBeNull();
   });
 
   it("is null when a completed selection is not valid", () => {
@@ -348,7 +364,7 @@ describe("ConfigurationModel.orderItem", () => {
       yarnColorIds: ["red", "blue"],
     });
 
-    expect(model.orderItem()).toBeNull();
+    expect(orderItem(model)).toBeNull();
   });
 
   it("returns the configured item when complete and valid, allowing a repeated colour", () => {
@@ -358,7 +374,7 @@ describe("ConfigurationModel.orderItem", () => {
       yarnColorIds: ["red", "red"],
     });
 
-    expect(model.orderItem()).toEqual({
+    expect(orderItem(model)).toEqual({
       blankId: "blank1",
       patternId: "plain",
       yarnColorIds: ["red", "red"],
@@ -372,7 +388,7 @@ describe("ConfigurationModel.orderItem", () => {
       patternId: "plain",
     });
 
-    expect(model.orderItem()).toEqual({
+    expect(orderItem(model)).toEqual({
       blankId: "blank1",
       patternId: "plain",
       yarnColorIds: ["red", "red"],
@@ -387,7 +403,7 @@ describe("ConfigurationModel.deadEnd", () => {
       patternId: "plain",
     });
 
-    expect(model.deadEnd()).toBeNull();
+    expect(model.view().deadEnd).toBeNull();
   });
 
   it("flags the pattern to reset when no size can complete it", () => {
@@ -397,6 +413,40 @@ describe("ConfigurationModel.deadEnd", () => {
       patternId: "festive",
     });
 
-    expect(model.deadEnd()?.reset).toBe("patternId");
+    expect(model.view().deadEnd?.reset).toBe("patternId");
+  });
+});
+
+describe("ConfigurationModel.view", () => {
+  it("keeps orderItem, price, and labels together under one nullable `ready`", () => {
+    // Incomplete: the whole trio is absent, not three independently-null fields.
+    expect(
+      new ConfigurationModel(definition, "cream", stock).view().ready,
+    ).toBeNull();
+
+    // Complete + valid: the trio resolves together and labels name every domain
+    // choice, so the island never reads the ProductDefinition (ADR-0005).
+    const ready = new ConfigurationModel(definition, "cream", stock, {
+      sizeId: "small",
+      patternId: "plain",
+      yarnColorIds: ["red", "blue"],
+    }).view().ready;
+
+    expect(ready).toEqual({
+      orderItem: {
+        blankId: "blank1",
+        patternId: "plain",
+        yarnColorIds: ["red", "blue"],
+        customisation: "",
+      },
+      price: { amount: 19000, currency: "SEK" },
+      labels: { size: "Small", pattern: "Plain", yarnColours: ["Red", "Blue"] },
+    });
+  });
+
+  it("exposes the customisation rule so the island never reads the definition", () => {
+    const view = new ConfigurationModel(definition, "cream", stock).view();
+
+    expect(view.customisationRule).toEqual(definition.customisation);
   });
 });

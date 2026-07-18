@@ -4,6 +4,7 @@ import type { BlankOption } from "./blank.utils";
 import type { Price } from "./money";
 import { PricingManager } from "./pricing";
 import type {
+  CustomisationRule,
   PatternVariant,
   ProductDefinition,
   ProductOrderItem,
@@ -11,6 +12,43 @@ import type {
 import { ProductCatalogue } from "./product-catalogue";
 
 export type OptionView = { id: string; label: string; disabled: boolean };
+
+/** Human-readable labels for an order item's domain choices (ADR-0005). */
+export type OrderItemLabels = {
+  size: string;
+  pattern: string;
+  yarnColours: string[];
+};
+
+/**
+ * The mutually-dependent trio that only exists once the selection resolves to a
+ * complete, valid, in-stock order item. The three fields share one invariant, so
+ * the interface hands them out together or not at all rather than as three
+ * independently-nullable methods the caller must reason about in lockstep.
+ */
+export type ReadyConfiguration = {
+  orderItem: ProductOrderItem;
+  price: Price;
+  labels: OrderItemLabels;
+};
+
+/**
+ * The single projection the island renders from (ADR-0005): every field list,
+ * the customisation rule, the dead-end signal, and — behind one nullable `ready`
+ * — the priceable order item. The island talks to this record alone and never
+ * reads the {@link ProductDefinition} directly.
+ */
+export type ConfigurationView = {
+  sizeOptions: OptionView[];
+  patternOptions: OptionView[];
+  yarnFields: YarnField[];
+  customisationRule: CustomisationRule;
+  deadEnd: DeadEnd | null;
+  ready: ReadyConfiguration | null;
+};
+
+/** A downstream selection to clear when the current one strands the customer. */
+export type DeadEnd = { reset: keyof Selection; reason: string };
 
 /**
  * One required yarn slot for the chosen pattern (ADR-0009). Every field offers
@@ -114,7 +152,24 @@ export class ConfigurationModel {
     };
   }
 
-  sizeOptions(): OptionView[] {
+  /**
+   * The single projection the island renders from (ADR-0005). Collapses the
+   * field lists, customisation rule, dead-end signal, and the priceable trio
+   * into one record so the island crosses one seam, and the completeness
+   * invariant shared by orderItem/price/labels is encoded once as `ready`.
+   */
+  view(): ConfigurationView {
+    return {
+      sizeOptions: this.sizeOptions(),
+      patternOptions: this.patternOptions(),
+      yarnFields: this.yarnFields(),
+      customisationRule: this.definition.customisation,
+      deadEnd: this.deadEnd(),
+      ready: this.ready(),
+    };
+  }
+
+  private sizeOptions(): OptionView[] {
     return this.blanksForColour().map((option) => ({
       id: option.size.id,
       label: option.size.name,
@@ -122,7 +177,7 @@ export class ConfigurationModel {
     }));
   }
 
-  patternOptions(): OptionView[] {
+  private patternOptions(): OptionView[] {
     return this.definition.patternVariants.map((variant) => ({
       id: variant.pattern.id,
       label: variant.pattern.name,
@@ -137,7 +192,7 @@ export class ConfigurationModel {
    * available yarn colour; a field with a single available colour auto-resolves
    * to it. Duplicates across fields are allowed and order is insignificant.
    */
-  yarnFields(): YarnField[] {
+  private yarnFields(): YarnField[] {
     const variant = this.selectedVariant();
     if (variant === undefined) {
       return [];
@@ -156,31 +211,27 @@ export class ConfigurationModel {
     }));
   }
 
-  price(): Price | null {
-    const item = this.orderItem();
-    return item ? this.pricing.calculate(item) : null;
-  }
-
-  orderItem(): ProductOrderItem | null {
-    const item = this.currentItem();
-    return item && this.availability.isAvailable(item) ? item : null;
-  }
-
   /**
-   * Human-readable labels for the current order item's domain choices, or null
-   * when the selection is incomplete. Colour and product name are route-/prop-
-   * level concerns the island owns; every domain-resolved label comes from here
-   * so the island never reads the ProductDefinition directly (ADR-0005).
+   * The priceable trio, or null when the current selection is not yet a complete,
+   * valid, in-stock order item. Order item, price, and labels share one invariant
+   * (ADR-0005), so they resolve together here rather than as three methods a
+   * caller has to null-check in lockstep. Colour and product name stay with the
+   * island; every domain-resolved label is computed here so the island never
+   * reads the ProductDefinition directly.
    */
-  orderItemLabels(): {
-    size: string;
-    pattern: string;
-    yarnColours: string[];
-  } | null {
-    const item = this.orderItem();
-    if (item === null) {
+  private ready(): ReadyConfiguration | null {
+    const orderItem = this.currentItem();
+    if (orderItem === null || !this.availability.isAvailable(orderItem)) {
       return null;
     }
+    return {
+      orderItem,
+      price: this.pricing.calculate(orderItem),
+      labels: this.labelsFor(orderItem),
+    };
+  }
+
+  private labelsFor(item: ProductOrderItem): OrderItemLabels {
     const size =
       this.blanksForColour().find((option) => option.blankId === item.blankId)
         ?.size.name ?? "";
@@ -195,7 +246,7 @@ export class ConfigurationModel {
    * When the current selection cannot lead to any valid, in-stock item, name the
    * downstream selection to clear so the customer is freed rather than stuck.
    */
-  deadEnd(): { reset: keyof Selection; reason: string } | null {
+  private deadEnd(): DeadEnd | null {
     // Dead-ends are about colour/size/pattern; yarn is left free so the search
     // completes it (omitting yarnColorIds lets hasCompletion fill the required
     // count). A pattern needing yarn with none available is already disabled.
