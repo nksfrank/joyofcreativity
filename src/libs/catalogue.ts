@@ -57,6 +57,11 @@ export class Catalogue {
     return this.#blanks.get(id);
   }
 
+  /** Every blank in the catalogue, e.g. for a fixture-integrity sweep. */
+  allBlanks(): Blank[] {
+    return [...this.#blanks.values()];
+  }
+
   requireBlank(id: string): Blank {
     const blank = this.getBlank(id);
     assert(blank, `Blank ${id} not found`);
