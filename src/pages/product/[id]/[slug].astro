@@ -1,39 +1,86 @@
 ---
+import { render } from "astro:content";
+import type { Product, WithContext } from "schema-dts";
 import Configurator from "@/components/Configurator.tsx";
 import SiteLayout from "@/components/layouts/SiteLayout.astro";
 import { getLocale } from "@/i18n/runtime";
+import { formatPriceAmount } from "@/libs/pricing";
+import { getProductById } from "@/libs/product";
+import { resolveSeoMeta } from "@/libs/product.utils";
 import {
-  getAllProducts,
-  getProductById,
+  getAllColourPages,
+  getColourNav,
+  getProductDetailEntry,
   getProductDetailsByProductId,
-} from "@/libs/product";
-import { resolveColourNav, resolveColourPages } from "@/libs/product.utils";
+} from "@/libs/product-content";
 import { assert } from "@/utils/assert";
 
-export function getStaticPaths() {
-  return getAllProducts().flatMap((product) =>
-    resolveColourPages(product.id).map((page) => ({
-      params: { id: page.id, slug: page.slug },
-      props: { page },
-    })),
-  );
+export async function getStaticPaths() {
+  const pages = await getAllColourPages();
+  return pages.map((page) => ({
+    params: { id: page.id, slug: page.slug },
+    props: { page },
+  }));
 }
 
 const { page } = Astro.props;
 const product = getProductById(page.productId);
 assert(product, `Product ${page.productId} not found`);
 
-const colourNav = resolveColourNav(page.productId, page.colorId);
+const colourNav = await getColourNav(page.productId, page.colorId);
 const productName =
-  getProductDetailsByProductId(page.productId).at(0)?.details.name ?? page.name;
+  (await getProductDetailsByProductId(page.productId)).at(0)?.details.name ??
+  page.name;
 const locale = getLocale();
+
+const seo = resolveSeoMeta(page);
+
+// Curated colours have a collection entry (id === page.id) whose body is the
+// extended marketing copy; generated colours (id like "1-blue") have none.
+const entry = await getProductDetailEntry(page.id);
+const Body = entry ? (await render(entry)).Content : undefined;
+
+// Product structured data (typed against schema.org via schema-dts): marketing
+// text from the collection, price from the code-defined structural model (never
+// duplicated into content).
+const jsonLd: WithContext<Product> = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: page.name,
+  description: seo.description,
+  ...(page.image ? { image: page.image } : {}),
+  offers: {
+    "@type": "Offer",
+    price: formatPriceAmount(product.price),
+    priceCurrency: product.price.currency,
+  },
+};
 ---
 
-<SiteLayout title={page.name}>
+<SiteLayout
+  title={seo.title}
+  description={seo.description}
+  keywords={seo.keywords}
+  og={{
+    title: seo.ogTitle,
+    description: seo.ogDescription,
+    image: seo.ogImage,
+    type: seo.ogType,
+  }}
+  jsonLd={jsonLd}
+>
   <article>
     {page.image && <img src={page.image} alt={page.name} />}
     <h1>{page.name}</h1>
     <p>{page.description}</p>
+
+    {
+      Body && (
+        <section data-testid="product-content">
+          <Body />
+        </section>
+      )
+    }
 
     <p data-testid="product-colour">Colour: {page.colourName}</p>
 

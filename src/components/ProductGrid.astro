@@ -1,23 +1,27 @@
 ---
-import { getAllProducts, getProductDetailsByProductId } from "@/libs/product";
-import { resolveColourNav } from "@/libs/product.utils";
+import { getAllProducts } from "@/libs/product";
+import {
+  getColourNav,
+  getProductDetailsByProductId,
+} from "@/libs/product-content";
 
 // Every mock product, each joined with its colour variants. The title links to
 // the product's primary colour page so a product is discoverable by clicking its
 // name — not only a colour swatch — and crawlers reach it without parsing swatches.
-const products = getAllProducts().map((product) => {
-  // "" as the current colour: isCurrent is irrelevant on a listing — we only
-  // need each colour's label + href, and the first variant is the primary page.
-  const variants = resolveColourNav(product.id, "");
-  return {
-    id: product.id,
-    name:
-      getProductDetailsByProductId(product.id).at(0)?.details.name ??
-      product.id,
-    href: variants.at(0)?.href,
-    variants,
-  };
-});
+const products = await Promise.all(
+  getAllProducts().map(async (product) => {
+    // "" as the current colour: isCurrent is irrelevant on a listing — we only
+    // need each colour's label + href, and the first variant is the primary page.
+    const variants = await getColourNav(product.id, "");
+    const details = await getProductDetailsByProductId(product.id);
+    return {
+      id: product.id,
+      name: details.at(0)?.details.name ?? product.id,
+      href: variants.at(0)?.href,
+      variants,
+    };
+  }),
+);
 ---
 
 <ul>

@@ -1,4 +1,4 @@
-import type { ProductDefinition, ProductDetail } from "./product.types";
+import type { ProductDefinition } from "./product.types";
 
 const products: ProductDefinition[] = [
   {
@@ -202,66 +202,12 @@ const products: ProductDefinition[] = [
   },
 ];
 
-const productDetails: ProductDetail[] = [
-  {
-    id: "1",
-    productId: "1",
-    blankId: "blank1",
-    details: {
-      name: "Signature Letter Sweater",
-      description: "A cozy hand-knit sweater, customisable to your taste.",
-      slug: "signature-letter-sweater",
-      image: "/images/signature-letter-sweater.jpg",
-    },
-  },
-  {
-    id: "2",
-    productId: "1",
-    blankId: "blank4",
-    details: {
-      name: "Christmas Red Signature Letter Sweater",
-      description:
-        "Our signature hand-knit sweater in a festive red, ready for the holidays.",
-      slug: "christmas-red-signature-letter-sweater",
-      image: "/images/christmas-red-signature-letter-sweater.jpg",
-    },
-  },
-  {
-    id: "3",
-    productId: "2",
-    blankId: "blank19",
-    details: {
-      name: "Snowdrift Sweater",
-      description: "A hand-knit sweater in a single, crisp white.",
-      slug: "snowdrift-sweater",
-      image: "/images/snowdrift-sweater.jpg",
-    },
-  },
-  {
-    id: "4",
-    productId: "3",
-    blankId: "blank17",
-    details: {
-      name: "Midnight Sweater",
-      description:
-        "A single-size hand-knit in midnight black — one colour, one pattern, ready to buy in one tap.",
-      slug: "midnight-sweater",
-      image: "/images/midnight-sweater.jpg",
-    },
-  },
-];
+// Product Detail marketing texts + SEO no longer live here: they moved to the
+// `products` Astro Content Collection (see src/content.config.ts and
+// src/libs/product-content.ts) so copy is git-authored without touching this
+// structural/pricing model, which stays code-defined for the isomorphic engines.
 
 export const getProductById = (id: string): ProductDefinition | undefined =>
   products.find((product) => product.id === id);
 
 export const getAllProducts = (): ProductDefinition[] => products;
-
-export const getProductDetailById = (id: string): ProductDetail | undefined =>
-  productDetails.find((detail) => detail.id === id);
-
-export const getProductDetailsByProductId = (
-  productId: string,
-): ProductDetail[] =>
-  productDetails.filter((detail) => detail.productId === productId);
-
-export const getAllProductDetails = (): ProductDetail[] => productDetails;

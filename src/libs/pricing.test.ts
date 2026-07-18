@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PricingManager } from "./pricing";
+import { formatPriceAmount, PricingManager } from "./pricing";
 import type { ProductDefinition, ProductOrderItem } from "./product.types";
 
 const noModifier = { value: 0, type: "fixed" } as const;
@@ -116,5 +116,15 @@ describe("PricingManager.calculate", () => {
       new PricingManager(percentage).calculate(item({ yarnColorIds: [] }))
         .amount,
     ).toBe(11000);
+  });
+});
+
+describe("formatPriceAmount", () => {
+  it("renders minor units as a bare two-decimal major-unit string", () => {
+    expect(formatPriceAmount({ amount: 79900, currency: "SEK" })).toBe(
+      "799.00",
+    );
+    expect(formatPriceAmount({ amount: 5, currency: "EUR" })).toBe("0.05");
+    expect(formatPriceAmount({ amount: 0, currency: "SEK" })).toBe("0.00");
   });
 });

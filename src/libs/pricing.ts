@@ -1,5 +1,5 @@
 import type { Locale } from "@/i18n/runtime";
-import { resolveProductBlank } from "@/libs/product.utils";
+import { ProductCatalogue } from "@/libs/product-catalogue";
 import { assert } from "@/utils/assert";
 import type { ProductDefinition, ProductOrderItem } from "./product.types";
 
@@ -15,9 +15,10 @@ export type PriceModifier = {
   type: "fixed" | "percentage";
 };
 
-type PriceRule = (
-  definition: ProductDefinition,
-) => (item: ProductOrderItem) => PriceValue;
+type PriceRule = (context: {
+  products: ProductCatalogue;
+  definition: ProductDefinition;
+}) => (item: ProductOrderItem) => PriceValue;
 
 const applyModifier = (
   basePrice: Price,
@@ -27,35 +28,38 @@ const applyModifier = (
     ? modifier.value
     : Math.round((basePrice.amount * modifier.value) / 100);
 
-const blankPrice: PriceRule = (definition) => (item) => {
-  const blank = resolveProductBlank(definition, item.blankId);
-  assert(blank, `Blank ${item.blankId} not found`);
-  const productBlank = definition.blanks.find((pb) => pb.blankId === blank.id);
-  assert(productBlank, `Blank ${blank.id} not offered by this product`);
-  return applyModifier(definition.price, productBlank.priceModifier);
-};
-
-const patternPrice: PriceRule = (definition) => (item) => {
-  const variant = definition.patternVariants.find(
-    (variant) => variant.pattern.id === item.patternId,
-  );
-  assert(variant, `Pattern with id ${item.patternId} not found`);
-  return applyModifier(definition.price, variant.pattern.priceModifier);
-};
-
-const yarnPrice: PriceRule = (definition) => (item) =>
-  item.yarnColorIds.reduce((total, yarnColorId) => {
-    const yarnColor = definition.availableYarnColours.find(
-      (color) => color.id === yarnColorId,
+const blankPrice: PriceRule = ({ products, definition }) => {
+  return (item) => {
+    const blank = products.requireOfferedBlank(item.blankId);
+    const productBlank = definition.blanks.find(
+      (pb) => pb.blankId === blank.id,
     );
-    assert(yarnColor, `Yarn color with id ${yarnColorId} not found`);
-    return total + applyModifier(definition.price, yarnColor.priceModifier);
-  }, 0);
+    assert(productBlank, `Blank ${blank.id} not offered by this product`);
+    return applyModifier(definition.price, productBlank.priceModifier);
+  };
+};
 
-const customisationPrice: PriceRule = (definition) => (item) =>
-  item.customisation
-    ? applyModifier(definition.price, definition.customisation.priceModifier)
-    : 0;
+const patternPrice: PriceRule = ({ products, definition }) => {
+  return (item) => {
+    const variant = products.requirePatternVariant(item.patternId);
+    return applyModifier(definition.price, variant.pattern.priceModifier);
+  };
+};
+
+const yarnPrice: PriceRule = ({ products, definition }) => {
+  return (item) =>
+    item.yarnColorIds.reduce((total, yarnColorId) => {
+      const yarnColor = products.requireYarnColor(yarnColorId);
+      return total + applyModifier(definition.price, yarnColor.priceModifier);
+    }, 0);
+};
+
+const customisationPrice: PriceRule =
+  ({ definition }) =>
+  (item) =>
+    item.customisation
+      ? applyModifier(definition.price, definition.customisation.priceModifier)
+      : 0;
 
 export class PricingManager {
   private rules: ((item: ProductOrderItem) => PriceValue)[];
@@ -63,8 +67,12 @@ export class PricingManager {
 
   constructor(definition: ProductDefinition) {
     this.base = definition.price;
+    const context = {
+      products: new ProductCatalogue(definition),
+      definition,
+    };
     this.rules = [blankPrice, patternPrice, yarnPrice, customisationPrice].map(
-      (rule) => rule(definition),
+      (rule) => rule(context),
     );
   }
 
@@ -77,9 +85,24 @@ export class PricingManager {
   }
 }
 
-// SEK and EUR both use 2 decimal places; revisit this divisor if a zero-decimal currency is added.
+// SEK and EUR both use 2 decimal places; revisit if a zero-decimal currency is added.
+const MINOR_UNITS_PER_MAJOR = 100;
+const MAJOR_UNIT_DECIMALS = Math.log10(MINOR_UNITS_PER_MAJOR);
+
+/** The price in major units (e.g. 79900 öre → 799). */
+const toMajorUnits = (price: Price): number =>
+  price.amount / MINOR_UNITS_PER_MAJOR;
+
 export const formatMoney = (price: Price, locale: Locale): string =>
   new Intl.NumberFormat(locale, {
     style: "currency",
     currency: price.currency,
-  }).format(price.amount / 100);
+  }).format(toMajorUnits(price));
+
+/**
+ * The bare major-unit amount as a fixed-decimal string, e.g. "799.00" — no
+ * currency symbol or locale grouping. For machine formats (schema.org / JSON-LD)
+ * that carry the currency separately; use formatMoney for human display.
+ */
+export const formatPriceAmount = (price: Price): string =>
+  toMajorUnits(price).toFixed(MAJOR_UNIT_DECIMALS);

@@ -40,6 +40,7 @@
     "@inlang/paraglide-js": "2.20.2",
     "@playwright/test": "1.61.1",
     "@types/node": "26.1.0",
+    "schema-dts": "2.0.0",
     "typescript": "6.0.3",
     "vitest": "4.1.10",
     "wrangler": "4.107.0"
