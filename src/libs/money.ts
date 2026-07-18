@@ -15,11 +15,6 @@ export type Price = {
   currency: CurrencyCode;
 };
 
-export type PriceModifier = {
-  value: number;
-  type: "fixed" | "percentage";
-};
-
 // SEK and EUR both use 2 decimal places; revisit if a zero-decimal currency is added.
 const MINOR_UNITS_PER_MAJOR = 100;
 const MAJOR_UNIT_DECIMALS = Math.log10(MINOR_UNITS_PER_MAJOR);
