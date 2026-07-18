@@ -16,6 +16,8 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
     exclude: [
       "src/server/db/**",
+      // Owned by the workers pool — needs a real D1 (#64).
+      "src/server/checkout/**/*.workers.test.ts",
       "**/node_modules/**",
       "**/dist/**",
       "**/e2e/**",

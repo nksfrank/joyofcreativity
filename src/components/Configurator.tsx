@@ -89,6 +89,16 @@ export default function Configurator({
     };
   }, [definition.id]);
 
+  // The cart line now stores the *server-validated* price (ADR-0016 superseding
+  // ADR-0004): add-to-cart calls `validateCheckout`, which re-prices the line
+  // server-side and re-checks it against live D1 stock, and stores that
+  // authoritative price — never the browser-computed `ready.price`, which stays
+  // purely for the instant configurator feedback (ADR-0003). A per-line problem
+  // (the four buckets) is surfaced instead of adding. Declared with the other
+  // hooks, above the loading early-return, so the hook order is stable.
+  const [addProblems, setAddProblems] = useState<string[] | null>(null);
+  const [adding, setAdding] = useState(false);
+
   const update = (partial: Partial<Selection>) =>
     setSelection((prev) => ({ ...prev, ...partial }));
 
@@ -135,7 +145,7 @@ export default function Configurator({
     }
   };
 
-  const addToCart = () => {
+  const addToCart = async () => {
     // `ready` bundles the order item, price, and labels behind one invariant: it
     // is non-null only when the selection prices. The model owns every domain
     // label (ADR-0005); the island adds only the route-/prop-level colour and
@@ -143,19 +153,43 @@ export default function Configurator({
     if (!ready) {
       return;
     }
-    addLine({
-      productId: definition.id,
-      item: ready.orderItem,
-      price: ready.price,
-      display: {
-        productName,
-        colour: colourName,
-        size: ready.labels.size,
-        pattern: ready.labels.pattern,
-        yarnColours: ready.labels.yarnColours,
-        customisation: selection.customisation,
-      },
-    });
+    setAdding(true);
+    setAddProblems(null);
+    try {
+      const { data, error } = await actions.validateCheckout({
+        lines: [
+          { productId: definition.id, item: ready.orderItem, quantity: 1 },
+        ],
+      });
+      if (error || !data) {
+        setAddProblems(["Could not verify this item. Please try again."]);
+        return;
+      }
+      if (!data.ok) {
+        setAddProblems(data.problems.flatMap((problem) => problem.reasons));
+        return;
+      }
+      const quoteLine = data.quote.lines[0];
+      if (!quoteLine) {
+        setAddProblems(["Could not verify this item. Please try again."]);
+        return;
+      }
+      addLine({
+        productId: definition.id,
+        item: ready.orderItem,
+        price: quoteLine.unitPrice,
+        display: {
+          productName,
+          colour: colourName,
+          size: ready.labels.size,
+          pattern: ready.labels.pattern,
+          yarnColours: ready.labels.yarnColours,
+          customisation: selection.customisation,
+        },
+      });
+    } finally {
+      setAdding(false);
+    }
   };
 
   return (
@@ -224,9 +258,21 @@ export default function Configurator({
           : "Select a size and pattern"}
       </p>
 
-      <button type="button" onClick={addToCart} disabled={!ready}>
+      <button type="button" onClick={addToCart} disabled={!ready || adding}>
         Add to cart
       </button>
+
+      {addProblems && addProblems.length > 0 && (
+        <div role="alert" aria-label="Item problems" data-testid="add-problems">
+          <ul>
+            {addProblems.map((reason) => (
+              <li key={reason} data-testid="add-problem">
+                {reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {deadEnd && (
         <div role="alertdialog" aria-label="No available combination">
