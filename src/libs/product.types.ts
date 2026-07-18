@@ -24,7 +24,7 @@ export type YarnColor = {
   priceModifier: PriceModifier;
 };
 
-type CustomisationRule = {
+export type CustomisationRule = {
   allowText: boolean;
   maxLength: number;
 
