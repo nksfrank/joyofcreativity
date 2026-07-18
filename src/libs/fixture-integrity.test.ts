@@ -41,7 +41,7 @@ describe("checkFixtureIntegrity", () => {
 
   it("flags a blank whose colour id is dangling", () => {
     const badBlanks: Blank[] = [
-      { id: "b1", colorId: "chartreuse", sizeId: "small", stock: 1 },
+      { id: "b1", colorId: "chartreuse", sizeId: "small" },
     ];
     const problems = checkFixtureIntegrity({
       catalogue: new Catalogue({ colors, sizes, blanks: badBlanks }),
@@ -52,9 +52,7 @@ describe("checkFixtureIntegrity", () => {
   });
 
   it("flags a blank whose size id is dangling", () => {
-    const badBlanks: Blank[] = [
-      { id: "b1", colorId: "cream", sizeId: "xxl", stock: 1 },
-    ];
+    const badBlanks: Blank[] = [{ id: "b1", colorId: "cream", sizeId: "xxl" }];
     const problems = checkFixtureIntegrity({
       catalogue: new Catalogue({ colors, sizes, blanks: badBlanks }),
       products: [],
@@ -136,7 +134,7 @@ describe("checkFixtureIntegrity", () => {
 
   it("collects every distinct problem", () => {
     const badBlanks: Blank[] = [
-      { id: "b1", colorId: "chartreuse", sizeId: "xxl", stock: 1 },
+      { id: "b1", colorId: "chartreuse", sizeId: "xxl" },
     ];
     const problems = checkFixtureIntegrity({
       catalogue: new Catalogue({ colors, sizes, blanks: badBlanks }),

@@ -12,14 +12,14 @@ export type Size = {
 
 /**
  * The physical raw good behind a product: one Color x Size combination.
- * Stock lives here, not on any product, because it's shared inventory —
- * selling any product built from this blank draws down the same count.
+ * Purely structural — its on-hand count is not carried here but read from D1
+ * via a {@link StockSnapshot}, because stock is shared, mutable inventory
+ * (selling any product built from this blank draws down the same count).
  */
 export type Blank = {
   id: string;
   colorId: string;
   sizeId: string;
-  stock: Stock;
 };
 
 /**
@@ -28,7 +28,6 @@ export type Blank = {
  * live client snapshot or a direct server read. Sourced from D1 (#62) — the
  * server repo `getOnHandForBlanks` reads it, and the `getStock` Action hands it
  * to the configurator on mount. A blank absent from the map is treated as zero
- * on-hand. (The advisory `Blank.stock` fixture field is now read by nobody; its
- * removal is the follow-up contract step.)
+ * on-hand.
  */
 export type StockSnapshot = ReadonlyMap<string, Stock>;
