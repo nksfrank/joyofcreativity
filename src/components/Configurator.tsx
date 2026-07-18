@@ -189,7 +189,9 @@ export default function Configurator({
       )}
 
       <p data-testid="product-price">
-        {ready ? Money.from(ready.price).format(locale) : "Select a size and pattern"}
+        {ready
+          ? Money.from(ready.price).format(locale)
+          : "Select a size and pattern"}
       </p>
 
       <button type="button" onClick={addToCart} disabled={!ready}>
