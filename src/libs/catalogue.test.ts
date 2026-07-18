@@ -64,6 +64,18 @@ describe("Catalogue", () => {
       );
     });
 
+    it("getBlankOption returns the join when present", () => {
+      expect(catalogue.getBlankOption("blank1")).toEqual({
+        blankId: "blank1",
+        color: colors[0],
+        size: sizes[0],
+      });
+    });
+
+    it("getBlankOption returns undefined for a dangling id", () => {
+      expect(catalogue.getBlankOption("nope")).toBeUndefined();
+    });
+
     it("describe returns the human label", () => {
       expect(
         catalogue.describe({

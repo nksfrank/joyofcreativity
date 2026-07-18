@@ -1,6 +1,5 @@
 import type { Locale } from "@/i18n/runtime";
 import { ProductCatalogue } from "@/libs/product-catalogue";
-import { assert } from "@/utils/assert";
 import type { ProductDefinition, ProductOrderItem } from "./product.types";
 
 /** Integer amount in minor units (e.g. öre, cents) — never a fractional major-unit value. */
@@ -30,11 +29,7 @@ const applyModifier = (
 
 const blankPrice: PriceRule = ({ products, definition }) => {
   return (item) => {
-    const blank = products.requireOfferedBlank(item.blankId);
-    const productBlank = definition.blanks.find(
-      (pb) => pb.blankId === blank.id,
-    );
-    assert(productBlank, `Blank ${blank.id} not offered by this product`);
+    const productBlank = products.requireProductBlank(item.blankId);
     return applyModifier(definition.price, productBlank.priceModifier);
   };
 };

@@ -1,5 +1,4 @@
 import type { StockSnapshot } from "@/libs/blank.types";
-import { catalogue } from "@/libs/catalogue";
 import { ProductCatalogue } from "@/libs/product-catalogue";
 import type { ProductDefinition, ProductOrderItem } from "./product.types";
 
@@ -27,7 +26,7 @@ const blankInStock: AvailabilityFn = ({ products, stock }) => {
     if ((stock.get(blank.id) ?? 0) <= 0) {
       return {
         ok: false,
-        reason: `${catalogue.describe(blank)} is out of stock`,
+        reason: `${products.describe(blank)} is out of stock`,
       };
     }
     return { ok: true };
@@ -43,7 +42,7 @@ const patternCompatibleWithBlank: AvailabilityFn = ({ products }) => {
     if (!compatible) {
       return {
         ok: false,
-        reason: `Pattern ${variant.pattern.name} is not compatible with ${catalogue.describe(blank)}`,
+        reason: `Pattern ${variant.pattern.name} is not compatible with ${products.describe(blank)}`,
       };
     }
     return { ok: true };

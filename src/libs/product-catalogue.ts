@@ -4,6 +4,7 @@ import type { BlankOption } from "./blank.utils";
 import { type Catalogue, catalogue as globalCatalogue } from "./catalogue";
 import type {
   PatternVariant,
+  ProductBlank,
   ProductDefinition,
   YarnColor,
 } from "./product.types";
@@ -19,7 +20,7 @@ import type {
 export class ProductCatalogue {
   readonly #definition: ProductDefinition;
   readonly #catalogue: Catalogue;
-  readonly #offered: ReadonlySet<string>;
+  readonly #offered: ReadonlyMap<string, ProductBlank>;
   readonly #patternVariants: ReadonlyMap<string, PatternVariant>;
   readonly #yarnColors: ReadonlyMap<string, YarnColor>;
 
@@ -29,7 +30,9 @@ export class ProductCatalogue {
   ) {
     this.#definition = definition;
     this.#catalogue = catalogue;
-    this.#offered = new Set(definition.blanks.map((blank) => blank.blankId));
+    this.#offered = new Map(
+      definition.blanks.map((blank) => [blank.blankId, blank]),
+    );
     this.#patternVariants = new Map(
       definition.patternVariants.map((variant) => [
         variant.pattern.id,
@@ -73,18 +76,29 @@ export class ProductCatalogue {
     return blank;
   }
 
+  /** The offer record (blank id + price modifier) if this definition offers it. */
+  getProductBlank(id: string): ProductBlank | undefined {
+    return this.#offered.get(id);
+  }
+
+  /** The offer record, or throws the canonical not-found message. */
+  requireProductBlank(id: string): ProductBlank {
+    const productBlank = this.getProductBlank(id);
+    assert(productBlank, `Blank ${id} not found`);
+    return productBlank;
+  }
+
+  /** Human-readable label for a blank, via the composed catalogue. */
+  describe(blank: Blank): string {
+    return this.#catalogue.describe(blank);
+  }
+
   /** Every colour x size this product offers, joined for display. */
   blankOptions(): BlankOption[] {
     return this.#definition.blanks
-      .map((productBlank): BlankOption | undefined => {
-        const blank = this.#catalogue.getBlank(productBlank.blankId);
-        const color = blank && this.#catalogue.getColor(blank.colorId);
-        const size = blank && this.#catalogue.getSize(blank.sizeId);
-        if (!blank || !color || !size) {
-          return undefined;
-        }
-        return { blankId: blank.id, color, size };
-      })
+      .map((productBlank) =>
+        this.#catalogue.getBlankOption(productBlank.blankId),
+      )
       .filter((option): option is BlankOption => option !== undefined);
   }
 }

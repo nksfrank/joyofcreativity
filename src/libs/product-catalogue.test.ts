@@ -104,6 +104,39 @@ describe("ProductCatalogue", () => {
     });
   });
 
+  describe("offer record (price modifier)", () => {
+    it("getProductBlank returns the offer only when this product offers it", () => {
+      expect(products.getProductBlank("blank1")).toEqual(definition.blanks[0]);
+      expect(products.getProductBlank("blank9")).toBeUndefined();
+      expect(products.getProductBlank("nope")).toBeUndefined();
+    });
+
+    it("requireProductBlank returns the offer, or throws the canonical message", () => {
+      expect(products.requireProductBlank("blank1")).toEqual(
+        definition.blanks[0],
+      );
+      expect(() => products.requireProductBlank("blank9")).toThrow(
+        "Blank blank9 not found",
+      );
+      expect(() => products.requireProductBlank("nope")).toThrow(
+        "Blank nope not found",
+      );
+    });
+  });
+
+  describe("describe", () => {
+    it("delegates to the composed catalogue for the label", () => {
+      const blank: Blank = {
+        id: "blank1",
+        colorId: "cream",
+        sizeId: "small",
+        stock: 5,
+      };
+      expect(products.describe(blank)).toBe(catalogue.describe(blank));
+      expect(products.describe(blank)).toBe("Cream Small");
+    });
+  });
+
   describe("blankOptions", () => {
     it("returns every colour x size the product offers as BlankOption[]", () => {
       expect(products.blankOptions()).toEqual([
