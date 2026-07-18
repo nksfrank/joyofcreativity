@@ -15,9 +15,10 @@ export type PriceModifier = {
   type: "fixed" | "percentage";
 };
 
-type PriceRule = (
-  definition: ProductDefinition,
-) => (item: ProductOrderItem) => PriceValue;
+type PriceRule = (context: {
+  products: ProductCatalogue;
+  definition: ProductDefinition;
+}) => (item: ProductOrderItem) => PriceValue;
 
 const applyModifier = (
   basePrice: Price,
@@ -27,8 +28,7 @@ const applyModifier = (
     ? modifier.value
     : Math.round((basePrice.amount * modifier.value) / 100);
 
-const blankPrice: PriceRule = (definition) => {
-  const products = new ProductCatalogue(definition);
+const blankPrice: PriceRule = ({ products, definition }) => {
   return (item) => {
     const blank = products.requireOfferedBlank(item.blankId);
     const productBlank = definition.blanks.find(
@@ -39,16 +39,14 @@ const blankPrice: PriceRule = (definition) => {
   };
 };
 
-const patternPrice: PriceRule = (definition) => {
-  const products = new ProductCatalogue(definition);
+const patternPrice: PriceRule = ({ products, definition }) => {
   return (item) => {
     const variant = products.requirePatternVariant(item.patternId);
     return applyModifier(definition.price, variant.pattern.priceModifier);
   };
 };
 
-const yarnPrice: PriceRule = (definition) => {
-  const products = new ProductCatalogue(definition);
+const yarnPrice: PriceRule = ({ products, definition }) => {
   return (item) =>
     item.yarnColorIds.reduce((total, yarnColorId) => {
       const yarnColor = products.requireYarnColor(yarnColorId);
@@ -56,10 +54,12 @@ const yarnPrice: PriceRule = (definition) => {
     }, 0);
 };
 
-const customisationPrice: PriceRule = (definition) => (item) =>
-  item.customisation
-    ? applyModifier(definition.price, definition.customisation.priceModifier)
-    : 0;
+const customisationPrice: PriceRule =
+  ({ definition }) =>
+  (item) =>
+    item.customisation
+      ? applyModifier(definition.price, definition.customisation.priceModifier)
+      : 0;
 
 export class PricingManager {
   private rules: ((item: ProductOrderItem) => PriceValue)[];
@@ -67,8 +67,12 @@ export class PricingManager {
 
   constructor(definition: ProductDefinition) {
     this.base = definition.price;
+    const context = {
+      products: new ProductCatalogue(definition),
+      definition,
+    };
     this.rules = [blankPrice, patternPrice, yarnPrice, customisationPrice].map(
-      (rule) => rule(definition),
+      (rule) => rule(context),
     );
   }
 
