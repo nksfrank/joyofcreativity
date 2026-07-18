@@ -13,8 +13,7 @@ const request: CreateCheckoutSession = {
   lineItems: [
     {
       name: "Hand-knit hat",
-      amountMinorUnits: 49900,
-      currency: "sek",
+      price: { amount: 49900, currency: "SEK" },
       quantity: 1,
     },
   ],

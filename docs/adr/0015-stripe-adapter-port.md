@@ -31,7 +31,13 @@ constructed inside the request handler from `env` (`import { env } from "cloudfl
 never memoised at module scope. The SDK is instantiated with `Stripe.createFetchHttpClient()` so
 it runs on `workerd` with no Node HTTP APIs. The key (`sk_test_…`) is a **secret**, so it lives
 in `.dev.vars` for local dev (documented in `.dev.vars.example`) and a `wrangler secret` in
-production — not in `wrangler.jsonc`'s committed `vars`.
+production — not in `wrangler.jsonc`'s committed `vars`. The one `cloudflare:workers` read is
+isolated in `src/server/stripe.env.ts` (`layerFromEnv()`, a one-liner over `layer`), so the pure
+port module stays runnable under plain Vitest and the virtual module never enters the test path —
+mirroring how `src/actions/` is the env boundary and `src/server/greeting.ts` stays pure. Because
+the secret isn't a committed `var`, `cf-typegen` won't type it; `stripe.env.d.ts` interface-merges
+`STRIPE_SECRET_KEY` onto `Cloudflare.Env` so the binding is typed without the generated types
+drifting on whether a local `.dev.vars` existed at type-gen time.
 
 **A faked port ships for tests** — `makeFakeStripe()` returns a `Stripe` layer that records every
 call and returns a canned session (or a canned typed `StripeError`), so an integration test can

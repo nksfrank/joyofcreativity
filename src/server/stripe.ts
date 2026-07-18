@@ -1,5 +1,6 @@
 import { Context, Data, Effect, Layer } from "effect";
 import StripeSdk from "stripe";
+import type { Price } from "@/libs/pricing";
 
 /**
  * Stripe adapter port (issue #61, ADR-0013/0014).
@@ -15,14 +16,12 @@ import StripeSdk from "stripe";
  * `import { env } from "cloudflare:workers"` (ADR-0014) — see {@link layer}.
  */
 
-/** One line of an embedded Checkout Session, in the shop's minor-units money. */
+/** One line of an embedded Checkout Session. */
 export interface CheckoutLineItem {
   /** Human-readable product name Stripe shows on the payment page. */
   readonly name: string;
-  /** Amount per unit in integer minor units (öre / cents) — see CONTEXT.md. */
-  readonly amountMinorUnits: number;
-  /** ISO currency the shop transacts in. */
-  readonly currency: "sek" | "eur";
+  /** Per-unit price — the domain `Price` (minor units + currency, CONTEXT.md). */
+  readonly price: Price;
   /** Number of this line ordered. */
   readonly quantity: number;
 }
@@ -70,8 +69,9 @@ const toCheckoutParams = (
   line_items: params.lineItems.map((item) => ({
     quantity: item.quantity,
     price_data: {
-      currency: item.currency,
-      unit_amount: item.amountMinorUnits,
+      // The domain currency is upper-case (`SEK`/`EUR`); Stripe wants lower-case.
+      currency: item.price.currency.toLowerCase(),
+      unit_amount: item.price.amount,
       product_data: { name: item.name },
     },
   })),
@@ -127,7 +127,9 @@ export interface FakeStripeConfig {
 /** A faked {@link Stripe} port plus the calls it recorded, for assertions. */
 export interface FakeStripe {
   readonly layer: Layer.Layer<Stripe>;
-  readonly calls: { readonly createCheckoutSession: CreateCheckoutSession[] };
+  readonly calls: {
+    readonly createCheckoutSession: readonly CreateCheckoutSession[];
+  };
 }
 
 const DEFAULT_SESSION: CheckoutSession = {
