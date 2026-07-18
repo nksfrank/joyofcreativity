@@ -17,9 +17,9 @@ const sizes: Size[] = [
   { id: "large", name: "Large" },
 ];
 const blanks: Blank[] = [
-  { id: "blank1", colorId: "cream", sizeId: "small", stock: 5 },
-  { id: "blank2", colorId: "cream", sizeId: "large", stock: 0 },
-  { id: "blank9", colorId: "red", sizeId: "small", stock: 3 },
+  { id: "blank1", colorId: "cream", sizeId: "small" },
+  { id: "blank2", colorId: "cream", sizeId: "large" },
+  { id: "blank9", colorId: "red", sizeId: "small" },
 ];
 const catalogue = new Catalogue({ colors, sizes, blanks });
 
@@ -130,7 +130,6 @@ describe("ProductCatalogue", () => {
         id: "blank1",
         colorId: "cream",
         sizeId: "small",
-        stock: 5,
       };
       expect(products.describe(blank)).toBe(catalogue.describe(blank));
       expect(products.describe(blank)).toBe("Cream Small");

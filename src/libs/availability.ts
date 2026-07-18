@@ -13,7 +13,8 @@ type AvailabilityFn = (context: {
 }) => AvailabilityRule;
 
 // Stock is an explicit input (#58): on-hand comes from the injected snapshot,
-// never from `blank.stock`. A blank missing from the snapshot counts as zero.
+// never from the blank itself (which carries no count). A blank missing from
+// the snapshot counts as zero.
 const blankInStock: AvailabilityFn = ({ products, stock }) => {
   return (item) => {
     const blank = products.getOfferedBlank(item.blankId);

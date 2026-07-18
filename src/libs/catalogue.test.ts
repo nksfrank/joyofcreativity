@@ -12,8 +12,8 @@ const sizes: Size[] = [
   { id: "large", name: "Large" },
 ];
 const blanks: Blank[] = [
-  { id: "blank1", colorId: "cream", sizeId: "small", stock: 5 },
-  { id: "blank2", colorId: "red", sizeId: "large", stock: 0 },
+  { id: "blank1", colorId: "cream", sizeId: "small" },
+  { id: "blank2", colorId: "red", sizeId: "large" },
 ];
 
 const catalogue = new Catalogue({ colors, sizes, blanks });
@@ -82,7 +82,6 @@ describe("Catalogue", () => {
           id: "blank1",
           colorId: "cream",
           sizeId: "small",
-          stock: 5,
         }),
       ).toBe("Cream Small");
       expect(
@@ -90,7 +89,6 @@ describe("Catalogue", () => {
           id: "blank2",
           colorId: "red",
           sizeId: "large",
-          stock: 0,
         }),
       ).toBe("Red Large");
     });
@@ -101,7 +99,6 @@ describe("Catalogue", () => {
           id: "x",
           colorId: "cream",
           sizeId: "gone",
-          stock: 0,
         }),
       ).toBe("Cream");
       expect(
@@ -109,7 +106,6 @@ describe("Catalogue", () => {
           id: "x",
           colorId: "gone",
           sizeId: "gone",
-          stock: 0,
         }),
       ).toBe("");
     });
