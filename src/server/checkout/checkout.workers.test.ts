@@ -53,6 +53,29 @@ describe("validateCheckout (real migrated D1)", () => {
     expect(verified.valid).toBe(true);
   });
 
+  it("ignores a client-supplied price — the quote is priced server-side (strip guard)", async () => {
+    // The exact attack from #64: a tampered cart carrying a forged 1 SEK price
+    // (and a forged display). The server never accepts client data — the decode
+    // boundary strips the excess and the shared engines re-price from scratch.
+    const exit = await run({
+      lines: [
+        { ...good, price: { amount: 1, currency: "SEK" }, display: "1 kr" },
+      ],
+    });
+    if (Exit.isFailure(exit)) throw new Error("expected success");
+
+    const result = exit.value;
+    if (!result.ok) throw new Error("expected a quote");
+
+    // The server price (79900 + 2000) stands; the forged 1 never surfaces.
+    expect(result.quote.lines).toStrictEqual([
+      { ...good, unitPrice: { amount: 81900, currency: "SEK" } },
+    ]);
+    // And no client-supplied field leaked into the signed quote line.
+    expect(result.quote.lines[0]).not.toHaveProperty("price");
+    expect(result.quote.lines[0]).not.toHaveProperty("display");
+  });
+
   it("classifies each bad line into its bucket, all problems returned together", async () => {
     const exit = await run({
       lines: [

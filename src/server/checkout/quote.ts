@@ -43,9 +43,30 @@ export type SignedQuote = QuotePayload & {
   signature: string;
 };
 
+/**
+ * The brand that marks a payload as having passed HMAC verification. It is a
+ * phantom (never present at runtime) and deliberately **not exported**, so no
+ * code outside this module can name the key to build or cast into a
+ * {@link VerifiedQuote}. The one sanctioned mint is {@link verifyQuote}.
+ */
+declare const VerifiedQuoteBrand: unique symbol;
+
+/**
+ * A quote payload proven authentic (ADR-0017). Because the brand is a private
+ * phantom, the *only* value of this type any code can hold is one `verifyQuote`
+ * minted after a good signature within the lock window — a cart line, an object
+ * literal, or a client-carried shape can never satisfy it. The future
+ * pay/commit path demands a `VerifiedQuote` and charges from its `unitPrice`s,
+ * so "charge a price the server never signed" is a compile error, not a rule
+ * anyone has to remember to enforce.
+ */
+export type VerifiedQuote = QuotePayload & {
+  readonly [VerifiedQuoteBrand]: true;
+};
+
 /** The verdict of checking a carried quote back at the commit boundary. */
 export type QuoteVerification =
-  | { valid: true; payload: QuotePayload }
+  | { valid: true; payload: VerifiedQuote }
   | { valid: false; reason: "signature" | "expired" };
 
 const encoder = new TextEncoder();
@@ -138,7 +159,9 @@ export const verifyQuote = async (
   if (now >= payload.expiresAt) {
     return { valid: false, reason: "expired" };
   }
-  return { valid: true, payload };
+  // The one sanctioned mint of a VerifiedQuote (ADR-0017): a good signature
+  // within the lock window is the sole way a payload earns the brand.
+  return { valid: true, payload: payload as VerifiedQuote };
 };
 
 /**

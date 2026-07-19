@@ -5,6 +5,7 @@ import {
   type QuotePayload,
   type SignedQuote,
   signQuote,
+  type VerifiedQuote,
   verifyQuote,
 } from "./quote";
 
@@ -123,6 +124,18 @@ describe("quote HMAC sign/verify", () => {
 
     const result = await verifyQuote(signed, withinLock, KEY);
     if (!result.valid) throw new Error("expected a valid quote");
-    expect(result.payload).toStrictEqual(original);
+    // The brand is phantom — the payload still deep-equals the original body;
+    // only its *type* now proves provenance (widened here for the comparison).
+    expect(result.payload as QuotePayload).toStrictEqual(original);
+  });
+
+  it("cannot mint a VerifiedQuote outside verifyQuote (compile-time guard)", () => {
+    // A plain payload is structurally a QuotePayload but lacks the private
+    // brand, so it is NOT assignable to VerifiedQuote. If this ever compiles
+    // (brand removed/weakened), the unused @ts-expect-error fails the build —
+    // the structural guarantee behind ADR-0017 regressing becomes a red build.
+    // @ts-expect-error a QuotePayload is not a verified quote — only verifyQuote mints one
+    const forged: VerifiedQuote = payload();
+    expect(forged).toBeDefined();
   });
 });
