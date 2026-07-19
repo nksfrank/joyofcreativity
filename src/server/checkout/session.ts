@@ -123,15 +123,22 @@ export const createCheckoutSession = (
       return { ok: false, reason: "out_of_stock", lines: shortfalls };
     }
 
+    // The line descriptor is the same string for the order snapshot and Stripe's
+    // product name, so resolve it once per line (each is a catalogue lookup).
+    const described = verified.lines.map((line) => ({
+      line,
+      display: describeLine(line),
+    }));
+
     // (3) Persist the authoritative `pending` order before Stripe exists. The
     // public reference is a UUIDv7 minted from the same clock as the row.
     const orderReference = uuidv7(now);
-    const lines: PendingOrderLine[] = verified.lines.map((line) => ({
+    const lines: PendingOrderLine[] = described.map(({ line, display }) => ({
       productId: line.productId,
       item: line.item,
       quantity: line.quantity,
       unitAmount: line.unitPrice.amount,
-      display: describeLine(line),
+      display,
     }));
     yield* insertPendingOrder({
       id: orderReference,
@@ -146,11 +153,13 @@ export const createCheckoutSession = (
     // (4) Open the embedded session from the LOCKED prices, stamping only the
     // compact reference id in metadata (the authoritative config stays in D1).
     const stripe = yield* Stripe;
-    const lineItems: CheckoutLineItem[] = verified.lines.map((line) => ({
-      name: describeLine(line),
-      price: line.unitPrice,
-      quantity: line.quantity,
-    }));
+    const lineItems: CheckoutLineItem[] = described.map(
+      ({ line, display }) => ({
+        name: display,
+        price: line.unitPrice,
+        quantity: line.quantity,
+      }),
+    );
     const session = yield* stripe.createCheckoutSession({
       lineItems,
       returnUrl,
