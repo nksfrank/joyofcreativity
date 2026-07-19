@@ -4,6 +4,7 @@ import { useState } from "preact/hooks";
 import type { Locale } from "@/i18n/runtime";
 import { Money } from "@/libs/money";
 import { cart, cartTotal, lineIdentity } from "@/stores/cart";
+import CheckoutEmbed from "./CheckoutEmbed";
 
 type Props = {
   locale: Locale;
@@ -33,10 +34,14 @@ export default function CartView({ locale }: Props) {
   // problems, surfaced per line below (all wrong things shown together).
   const [result, setResult] = useState<CheckoutResult | null>(null);
   const [checking, setChecking] = useState(false);
+  // Once the quote checks out, the buyer opts into payment and we mount Stripe's
+  // embedded Checkout (#65) — the second authoritative checkpoint.
+  const [paying, setPaying] = useState(false);
 
   const validate = async () => {
     setChecking(true);
     setResult(null);
+    setPaying(false);
     try {
       const { data, error } = await actions.validateCheckout({
         lines: lines.map((line) => ({
@@ -124,11 +129,22 @@ export default function CartView({ locale }: Props) {
         Proceed to checkout
       </button>
 
-      {result?.ok && (
-        <p data-testid="checkout-ready">
-          Everything checks out — ready to pay.
-        </p>
+      {result?.ok && !paying && (
+        <>
+          <p data-testid="checkout-ready">
+            Everything checks out — ready to pay.
+          </p>
+          <button
+            type="button"
+            onClick={() => setPaying(true)}
+            data-testid="checkout-pay"
+          >
+            Pay now
+          </button>
+        </>
       )}
+
+      {result?.ok && paying && <CheckoutEmbed quote={result.quote} />}
 
       {result && !result.ok && (
         <div role="alert" aria-label="Checkout problems">
