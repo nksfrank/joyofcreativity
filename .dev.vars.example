@@ -7,3 +7,10 @@
 # `import { env } from "cloudflare:workers"` (ADR-0013/0014), and handed to the
 # Stripe adapter port in src/server/stripe.ts. Never expose it to the client.
 STRIPE_SECRET_KEY="sk_test_replace_me"
+
+# Stripe webhook signing secret (issue #66). Starts with `whsec_`; get it from
+# the Stripe CLI (`stripe listen`) locally or the webhook endpoint's settings in
+# the Dashboard. Read server-side only via `cloudflare:workers` env and used by
+# the webhook API route (src/pages/api/stripe/webhook.ts) to verify the
+# `Stripe-Signature` header against the raw request body.
+STRIPE_WEBHOOK_SECRET="whsec_replace_me"

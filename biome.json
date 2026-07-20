@@ -89,7 +89,8 @@
       "includes": [
         "**/src/components/**",
         "**/src/stores/**",
-        "**/src/pages/**"
+        "**/src/pages/**",
+        "!**/src/pages/api/**"
       ],
       "linter": {
         "rules": {

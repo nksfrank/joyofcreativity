@@ -47,6 +47,31 @@ export interface CheckoutSession {
 }
 
 /**
+ * A raw webhook delivery, as it arrives at the endpoint (issue #66): the
+ * unparsed request body, the `Stripe-Signature` header value, and the webhook
+ * signing secret to verify against. The `payload` is the raw `request.text()` —
+ * verification must run against the exact bytes Stripe signed, not a re-serialised
+ * JSON, so this never speaks a parsed shape.
+ */
+export interface WebhookDelivery {
+  readonly payload: string;
+  /** The `Stripe-Signature` header value; may be absent, which fails verification. */
+  readonly signature: string | null;
+  /** The webhook signing secret (`whsec_…`), read per-invocation from `env`. */
+  readonly secret: string;
+}
+
+/**
+ * A verified webhook event, reduced to the domain-shaped fields a consumer
+ * branches on. Kept minimal on purpose (issue #66 only verifies and no-ops);
+ * the reconciliation logic in #35 widens this as it starts to read event data.
+ */
+export interface WebhookEvent {
+  readonly id: string;
+  readonly type: string;
+}
+
+/**
  * The typed failure channel for every port operation. Any SDK rejection or a
  * malformed Stripe response is normalised into this so callers translate one
  * error shape, never the SDK's throw surface.
@@ -61,6 +86,16 @@ export interface StripeService {
   readonly createCheckoutSession: (
     params: CreateCheckoutSession,
   ) => Effect.Effect<CheckoutSession, StripeError>;
+  /**
+   * Verify a raw webhook delivery's signature against the signing secret and
+   * return the decoded event (issue #66). Any signature mismatch, missing
+   * header, or malformed payload is normalised to a {@link StripeError} — the
+   * caller rejects the delivery without learning the SDK's throw surface. Uses
+   * async Web Crypto (`constructEventAsync`) so it runs on `workerd`.
+   */
+  readonly constructWebhookEvent: (
+    delivery: WebhookDelivery,
+  ) => Effect.Effect<WebhookEvent, StripeError>;
 }
 
 /** The Effect service tag callers depend on instead of the SDK. */
@@ -109,6 +144,24 @@ const liveFromSdk = (sdk: StripeSdk): StripeService => ({
             ),
       ),
     ),
+
+  constructWebhookEvent: (delivery) =>
+    Effect.tryPromise({
+      // `constructEventAsync` uses async Web Crypto (workerd-safe) and both
+      // verifies the signature and decodes the payload in one step; a missing
+      // header, bad signature, or unparseable body all reject here.
+      try: () =>
+        sdk.webhooks.constructEventAsync(
+          delivery.payload,
+          delivery.signature ?? "",
+          delivery.secret,
+        ),
+      catch: (cause) =>
+        new StripeError({
+          message: "Stripe webhook signature verification failed",
+          cause,
+        }),
+    }).pipe(Effect.map((event) => ({ id: event.id, type: event.type }))),
 });
 
 /**
@@ -130,6 +183,8 @@ export const layer = (secretKey: string): Layer.Layer<Stripe> =>
 export interface FakeStripeConfig {
   readonly session?: CheckoutSession;
   readonly failWith?: StripeError;
+  /** A canned verified event returned by {@link StripeService.constructWebhookEvent}. */
+  readonly event?: WebhookEvent;
 }
 
 /** A faked {@link Stripe} port plus the calls it recorded, for assertions. */
@@ -137,12 +192,18 @@ export interface FakeStripe {
   readonly layer: Layer.Layer<Stripe>;
   readonly calls: {
     readonly createCheckoutSession: readonly CreateCheckoutSession[];
+    readonly constructWebhookEvent: readonly WebhookDelivery[];
   };
 }
 
 const DEFAULT_SESSION: CheckoutSession = {
   id: "cs_test_fake",
   clientSecret: "cs_test_fake_secret",
+};
+
+const DEFAULT_EVENT: WebhookEvent = {
+  id: "evt_test_fake",
+  type: "checkout.session.completed",
 };
 
 /**
@@ -152,8 +213,12 @@ const DEFAULT_SESSION: CheckoutSession = {
  * depend on {@link Stripe} provide `fake.layer` and assert against `fake.calls`.
  */
 export const makeFakeStripe = (config: FakeStripeConfig = {}): FakeStripe => {
-  const calls: { createCheckoutSession: CreateCheckoutSession[] } = {
+  const calls: {
+    createCheckoutSession: CreateCheckoutSession[];
+    constructWebhookEvent: WebhookDelivery[];
+  } = {
     createCheckoutSession: [],
+    constructWebhookEvent: [],
   };
 
   const service: StripeService = {
@@ -163,6 +228,14 @@ export const makeFakeStripe = (config: FakeStripeConfig = {}): FakeStripe => {
           config.failWith
             ? Effect.fail(config.failWith)
             : Effect.succeed(config.session ?? DEFAULT_SESSION),
+        ),
+      ),
+    constructWebhookEvent: (delivery) =>
+      Effect.sync(() => calls.constructWebhookEvent.push(delivery)).pipe(
+        Effect.andThen(() =>
+          config.failWith
+            ? Effect.fail(config.failWith)
+            : Effect.succeed(config.event ?? DEFAULT_EVENT),
         ),
       ),
   };
