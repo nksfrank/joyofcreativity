@@ -31,6 +31,13 @@ export interface CreateCheckoutSession {
   readonly lineItems: readonly CheckoutLineItem[];
   /** Where Stripe returns the buyer after the embedded flow completes. */
   readonly returnUrl: string;
+  /**
+   * Compact reference data stamped on the Session (#65). Stripe holds only a
+   * pointer — the order's public id — never the domain model; the authoritative
+   * configuration lives in our D1. Values are string-only and capped at 500 chars
+   * per Stripe's metadata limits, which a UUIDv7 reference is far under.
+   */
+  readonly metadata?: Readonly<Record<string, string>>;
 }
 
 /** What a caller needs back to mount Stripe's embedded checkout client-side. */
@@ -66,6 +73,7 @@ const toCheckoutParams = (
   ui_mode: "embedded_page",
   mode: "payment",
   return_url: params.returnUrl,
+  ...(params.metadata ? { metadata: params.metadata } : {}),
   line_items: params.lineItems.map((item) => ({
     quantity: item.quantity,
     price_data: {
