@@ -4,11 +4,11 @@ import { ActionError, defineAction } from "astro:actions";
 // Everything past this line is Effect + effect/Schema (ADR-0014).
 import { env } from "cloudflare:workers";
 import { z } from "astro/zod";
-import { Layer } from "effect";
+import { Effect, Layer, Schema } from "effect";
 import { isParseError, TreeFormatter } from "effect/ParseResult";
 import { validateCheckout } from "@/server/checkout/checkout";
 import { quoteSignerFromEnv } from "@/server/checkout/checkout.env";
-import type { SignedQuote } from "@/server/checkout/quote";
+import { SignedQuoteSchema } from "@/server/checkout/quote";
 import { createCheckoutSession } from "@/server/checkout/session";
 import { createDb, Database } from "@/server/db/client";
 import { getStockForProduct } from "@/server/db/stock";
@@ -126,46 +126,41 @@ export const server = {
    * outcomes returned in the payload; only an infrastructure fault is a 500.
    */
   createCheckoutSession: defineAction({
+    // The zod `input` guards only the wire shape Astro forces (ADR-0014): the
+    // quote is passed through as `unknown` and decoded by the one source of the
+    // quote's shape — `SignedQuoteSchema` — inside the Effect program below, so
+    // there is no hand-maintained schema mirror and no `as SignedQuote` cast
+    // (#54 architecture review, candidate 2).
     input: z.object({
-      quote: z.object({
-        lines: z.array(
-          z.object({
-            productId: z.string(),
-            item: z.object({
-              blankId: z.string(),
-              patternId: z.string(),
-              yarnColorIds: z.array(z.string()),
-              customisation: z.string(),
-            }),
-            quantity: z.number(),
-            unitPrice: z.object({
-              amount: z.number(),
-              currency: z.string(),
-            }),
-          }),
-        ),
-        currency: z.string(),
-        issuedAt: z.number(),
-        expiresAt: z.number(),
-        quoteId: z.string(),
-        signature: z.string(),
-      }),
+      quote: z.unknown(),
       returnUrl: z.url(),
     }),
-    // Every typed failure here (StockReadError, OrderWriteError, StripeError) is
-    // infrastructure → 500; the customer-facing blocks (quote_invalid,
-    // out_of_stock) are successful results, not failures, so there is no
-    // translation to add. The zod schema only proves wire shape; the HMAC verify
-    // inside `createCheckoutSession` re-establishes authority, so the cast is safe.
+    // Decode the carried quote through the shared schema (parse, don't cast),
+    // then commit. A `ParseError` from a malformed quote is a bad request → 400;
+    // every other typed failure (StockReadError, OrderWriteError, StripeError) is
+    // infrastructure → 500. The customer-facing blocks (quote_invalid,
+    // out_of_stock) are successful results, not failures. The HMAC verify inside
+    // `createCheckoutSession` re-establishes authority regardless of the decode.
     handler: ({ quote, returnUrl }) =>
       runAction(
-        createCheckoutSession(quote as SignedQuote, returnUrl, Date.now()),
+        Schema.decodeUnknown(SignedQuoteSchema)(quote).pipe(
+          Effect.flatMap((decoded) =>
+            createCheckoutSession(decoded, returnUrl, Date.now()),
+          ),
+        ),
         Layer.mergeAll(
           Layer.succeed(Database, createDb(env.DB)),
           quoteSignerFromEnv(),
           stripeFromEnv(),
         ),
         {
+          translate: (failure) =>
+            isParseError(failure)
+              ? new ActionError({
+                  code: "BAD_REQUEST",
+                  message: TreeFormatter.formatErrorSync(failure),
+                })
+              : undefined,
           fallbackMessage: "Failed to create checkout session",
         },
       ),

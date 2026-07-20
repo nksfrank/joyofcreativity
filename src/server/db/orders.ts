@@ -1,6 +1,6 @@
 import type { BatchItem } from "drizzle-orm/batch";
 import { Data, Effect } from "effect";
-import type { CurrencyCode } from "@/libs/money";
+import type { CurrencyCode, Price } from "@/libs/money";
 import type { ProductOrderItem } from "@/libs/product.types";
 import { Database } from "./client";
 import { orderItems, orders } from "./schema";
@@ -15,13 +15,18 @@ export class OrderWriteError extends Data.TaggedError("OrderWriteError")<{
   readonly cause: unknown;
 }> {}
 
-/** One snapshotted line of a pending order: frozen config + server-locked minor-unit price. */
+/** One snapshotted line of a pending order: frozen config + server-locked price. */
 export type PendingOrderLine = {
   readonly productId: string;
   readonly item: ProductOrderItem;
   readonly quantity: number;
-  /** The server-locked unit price in integer minor units (currency is on the order). */
-  readonly unitAmount: number;
+  /**
+   * The server-locked unit {@link Price} — currency and all. The money value
+   * crosses the seam intact and only degrades to a bare minor-unit column inside
+   * {@link insertPendingOrder}, so a caller never hand-strips currency here (#54
+   * architecture review, candidate 4).
+   */
+  readonly unitPrice: Price;
   /** Human-readable line label captured for the receipt. */
   readonly display: string;
 };
@@ -67,7 +72,9 @@ export const insertPendingOrder = (
         patternId: line.item.patternId,
         yarnColorIds: line.item.yarnColorIds,
         customisation: line.item.customisation,
-        unitAmount: line.unitAmount,
+        // The one place a Price degrades to a bare minor-unit column; currency
+        // lives once on the order row (the single-currency invariant, ADR-0016).
+        unitAmount: line.unitPrice.amount,
         quantity: line.quantity,
         display: line.display,
       }),

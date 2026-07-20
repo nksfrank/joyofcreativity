@@ -2,6 +2,7 @@ import { Effect, Schema } from "effect";
 import type { ParseError } from "effect/ParseResult";
 import { AvailabilityManager } from "@/libs/availability";
 import type { StockSnapshot } from "@/libs/blank.types";
+import { onHand } from "@/libs/blank.utils";
 import type { CurrencyCode } from "@/libs/money";
 import { PricingManager } from "@/libs/pricing";
 import { getProductById } from "@/libs/product";
@@ -9,6 +10,7 @@ import type { ProductDefinition, ProductOrderItem } from "@/libs/product.types";
 import { ProductCatalogue } from "@/libs/product-catalogue";
 import type { Database } from "@/server/db/client";
 import { getOnHandForBlanks, type StockReadError } from "@/server/db/stock";
+import { ProductOrderItemSchema } from "./codecs";
 import {
   QUOTE_TTL_MS,
   type QuoteLine,
@@ -203,14 +205,14 @@ export const classifyCart = (
       return;
     }
 
-    const onHand = snapshot.get(line.item.blankId) ?? 0;
-    if (onHand < line.quantity) {
+    const have = onHand(snapshot, line.item.blankId);
+    if (have < line.quantity) {
       const blank = family.catalogue.requireOfferedBlank(line.item.blankId);
       problems.push({
         index,
         bucket: "out_of_stock",
         reasons: [
-          `${family.catalogue.describe(blank)} is out of stock (${onHand} on hand, ${line.quantity} requested)`,
+          `${family.catalogue.describe(blank)} is out of stock (${have} on hand, ${line.quantity} requested)`,
         ],
       });
       return;
@@ -256,18 +258,9 @@ export type ValidateCheckoutResult =
   | { ok: true; quote: SignedQuote }
   | { ok: false; problems: LineProblem[] };
 
-const OrderItemSchema = Schema.Struct({
-  blankId: Schema.String,
-  patternId: Schema.String,
-  // Mutable so the decoded item matches `ProductOrderItem` (a `string[]`) the
-  // engines read; they never mutate it.
-  yarnColorIds: Schema.mutable(Schema.Array(Schema.String)),
-  customisation: Schema.String,
-});
-
 const RequestLineSchema = Schema.Struct({
   productId: Schema.String,
-  item: OrderItemSchema,
+  item: ProductOrderItemSchema,
   quantity: Schema.Number.pipe(Schema.int(), Schema.positive()),
 });
 

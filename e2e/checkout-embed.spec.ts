@@ -21,11 +21,6 @@ import { expect, type Page, test } from "@playwright/test";
  */
 const BLUE_LARGE = "blank9";
 
-test.skip(
-  !process.env.E2E_STRIPE,
-  "Set E2E_STRIPE=1 with Stripe test keys (STRIPE_SECRET_KEY + PUBLIC_STRIPE_PUBLISHABLE_KEY) to run the embedded-checkout e2e.",
-);
-
 /** Set a Blank's on-hand directly in the local D1 the dev server reads. */
 function setOnHand(blankId: string, onHand: number): void {
   execSync(

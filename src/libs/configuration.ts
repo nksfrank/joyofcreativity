@@ -1,6 +1,6 @@
 import { AvailabilityManager } from "./availability";
 import type { StockSnapshot } from "./blank.types";
-import type { BlankOption } from "./blank.utils";
+import { type BlankOption, onHand } from "./blank.utils";
 import type { Price } from "./money";
 import { PricingManager } from "./pricing";
 import type {
@@ -173,7 +173,7 @@ export class ConfigurationModel {
     return this.blanksForColour().map((option) => ({
       id: option.size.id,
       label: option.size.name,
-      disabled: (this.stock.get(option.blankId) ?? 0) <= 0,
+      disabled: onHand(this.stock, option.blankId) <= 0,
     }));
   }
 
