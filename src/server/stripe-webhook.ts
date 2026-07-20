@@ -23,7 +23,7 @@ export interface WebhookDeps {
   /**
    * The {@link Stripe} port layer, injected by the caller. The route provides
    * the live `layerFromEnv()` (the one place the SDK is fed its secret key,
-   * ADR-0015); tests provide a live layer over a throwaway key. Keeping the port
+   * ADR-0019); tests provide a live layer over a throwaway key. Keeping the port
    * a dependency — not a key this handler builds — is why this module never
    * imports `cloudflare:workers` and stays unit-testable under plain Vitest.
    */

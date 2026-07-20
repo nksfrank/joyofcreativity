@@ -20,7 +20,9 @@ Use these terms verbatim in code, tests, issues, and docs. Avoid the listed syno
   customisation rule). Identified by `productId`.
 - **Product Detail** — one *navigable page* for a family, pinned to a single blank, with its own
   marketing texts (name, description, slug, image). A curated SEO entry point and the page's
-  default colour — **not** a separate product.
+  default colour — **not** a separate product. Its content + SEO live in a git-authored **Astro
+  Content Collection** (`src/content/products/`), split from the code-defined structural/pricing
+  model — see ADR-0020.
 - **Configuration** — an in-progress set of selections in the configurator UI, before it is added
   to the cart.
 - **Product Order Item** — a *complete, resolved* configuration: `{ blankId, patternId,
