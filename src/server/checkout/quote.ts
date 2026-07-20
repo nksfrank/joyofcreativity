@@ -1,6 +1,9 @@
-import { Context, Effect, Layer } from "effect";
-import type { CurrencyCode, Price } from "@/libs/money";
-import type { ProductOrderItem } from "@/libs/product.types";
+import { Context, Effect, Layer, Schema } from "effect";
+import {
+  CurrencyCodeSchema,
+  PriceSchema,
+  ProductOrderItemSchema,
+} from "./codecs";
 
 /**
  * The signed quote — the price lock (#64, ADR-0016 superseding ADR-0004).
@@ -11,37 +14,51 @@ import type { ProductOrderItem } from "@/libs/product.types";
  * commit, and a valid signature is the server's own attestation — there is
  * nothing left to re-confirm. A tampered line, price, config, currency, or an
  * expired `expiresAt` all fail verification (bucket 1 at the commit boundary).
+ *
+ * The quote's shape lives once, as {@link SignedQuoteSchema}: the TS types below
+ * are *derived* from it and the commit boundary *decodes* a carried quote through
+ * it (never casts), so the wire shape, the domain type, and the validator can
+ * only ever agree (the deepening in the #54 architecture review).
  */
 
 /** Hours-to-live before a locked quote must be re-validated and re-priced. The one tunable. */
 export const QUOTE_TTL_MS = 24 * 60 * 60 * 1000;
 
 /** One priced line inside a quote: the server's unit price for a re-validated order item. */
-export type QuoteLine = {
-  productId: string;
-  item: ProductOrderItem;
-  quantity: number;
+export const QuoteLineSchema = Schema.Struct({
+  productId: Schema.String,
+  item: ProductOrderItemSchema,
+  quantity: Schema.Number,
   /** The server-computed unit price (ADR-0004 superseded): authoritative, never browser-computed. */
-  unitPrice: Price;
-};
+  unitPrice: PriceSchema,
+});
 
 /** The signed body: everything the HMAC covers. Single-currency by construction (`currency`). */
-export type QuotePayload = {
-  lines: readonly QuoteLine[];
-  currency: CurrencyCode;
+export const QuotePayloadSchema = Schema.Struct({
+  lines: Schema.Array(QuoteLineSchema),
+  currency: CurrencyCodeSchema,
   /** Epoch millis the quote was issued. */
-  issuedAt: number;
+  issuedAt: Schema.Number,
   /** Epoch millis the price lock lapses (issuedAt + QUOTE_TTL_MS). */
-  expiresAt: number;
+  expiresAt: Schema.Number,
   /** A random id so two identical carts still produce distinct quotes. */
-  quoteId: string;
-};
+  quoteId: Schema.String,
+});
 
-/** A quote plus its detached HMAC signature — what `validateCheckout` returns and the client carries. */
-export type SignedQuote = QuotePayload & {
+/**
+ * A quote plus its detached HMAC signature — what `validateCheckout` returns, the
+ * client carries, and `createCheckoutSession` decodes back through this same
+ * schema. The one source of the quote's shape.
+ */
+export const SignedQuoteSchema = Schema.Struct({
+  ...QuotePayloadSchema.fields,
   /** Base64 HMAC-SHA256 over the canonical payload, keyed by the quote-signing secret. */
-  signature: string;
-};
+  signature: Schema.String,
+});
+
+export type QuoteLine = Schema.Schema.Type<typeof QuoteLineSchema>;
+export type QuotePayload = Schema.Schema.Type<typeof QuotePayloadSchema>;
+export type SignedQuote = Schema.Schema.Type<typeof SignedQuoteSchema>;
 
 /**
  * The brand that marks a payload as having passed HMAC verification. It is a

@@ -1,4 +1,5 @@
 import type { StockSnapshot } from "@/libs/blank.types";
+import { onHand } from "@/libs/blank.utils";
 import { ProductCatalogue } from "@/libs/product-catalogue";
 import type { ProductDefinition, ProductOrderItem } from "./product.types";
 
@@ -24,7 +25,7 @@ const blankInStock: AvailabilityFn = ({ products, stock }) => {
         reason: `This product is not available in the selected color and size`,
       };
     }
-    if ((stock.get(blank.id) ?? 0) <= 0) {
+    if (onHand(stock, blank.id) <= 0) {
       return {
         ok: false,
         reason: `${products.describe(blank)} is out of stock`,
