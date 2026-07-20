@@ -15,7 +15,7 @@ export type Db = ReturnType<typeof createDb>;
 /**
  * The database as an Effect service (ADR-0014): D1 repos are `Effect.gen`
  * programs that declare {@link Database} as a requirement and read the client
- * from it, exactly as `greeting.ts` declares {@link ServerEnv}. The caller — an
+ * from it. The caller — an
  * Action reading `env.DB` from `cloudflare:workers` (ADR-0013), never the
  * removed `Astro.locals.runtime.env` — builds the layer per invocation with
  * `Layer.succeed(Database, createDb(env.DB))` and provides it. Nothing reaches

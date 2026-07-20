@@ -91,3 +91,21 @@ cost into the client bundle, undetected until someone inspects the build output.
   (memory, superseded by this ADR) — rejected now that this foundation ticket is the first
   server/ code being written at all; establishing the pattern here is cheaper than migrating
   later.
+
+## Update (2026-07-20)
+
+The decision stands; two things this ADR set up have now run their course.
+
+- **The `greet` demo and its `ServerEnv` tag are retired.** They existed only to prove the
+  pattern before real server/ code existed (§Decision). The checkout, stock, and orders
+  programs now demonstrate every primitive — `Effect.gen`, `Context.Tag`, `Layer`,
+  `effect/Schema`, and the typed error channel — so the demo was dead scaffolding and was
+  deleted along with its `ServerCheck` island, the `/dev/server-check` route, its e2e spec, and
+  the `SERVER_SURFACE_GREETING` binding.
+- **The cross-cutting-policy home this ADR promised now exists.** The rationale for exposing
+  Effect at the RPC boundary ("cross-cutting policies … trivial to apply uniformly to every
+  action") was unrealised while each Action hand-rolled the same `runPromiseExit` → `Exit`
+  unwrap → `Cause.failureOption` → `ActionError` translation. That ceremony now lives once in
+  `src/actions/run-action.ts` (`runAction`): each Action passes its program, its per-invocation
+  layer, and a small typed-error → `ActionError` translator. A retry/timeout/rate-limit policy
+  is added there once, not in every handler.
