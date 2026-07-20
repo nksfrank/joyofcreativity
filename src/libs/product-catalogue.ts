@@ -6,6 +6,7 @@ import type {
   PatternVariant,
   ProductBlank,
   ProductDefinition,
+  ProductOrderItem,
   YarnColor,
 } from "./product.types";
 
@@ -91,6 +92,19 @@ export class ProductCatalogue {
   /** Human-readable label for a blank, via the composed catalogue. */
   describe(blank: Blank): string {
     return this.#catalogue.describe(blank);
+  }
+
+  /**
+   * Human-readable descriptor for a configured selection, e.g. "Ivory Small —
+   * Plain". Tolerant: an unoffered blank falls back to its id and an unknown
+   * pattern is dropped, so a display lookup never fails on a cosmetic miss.
+   */
+  describeSelection(item: ProductOrderItem): string {
+    const blank = this.getOfferedBlank(item.blankId);
+    const variant = this.getPatternVariant(item.patternId);
+    return [blank ? this.describe(blank) : item.blankId, variant?.pattern.name]
+      .filter(Boolean)
+      .join(" — ");
   }
 
   /** Every colour x size this product offers, joined for display. */

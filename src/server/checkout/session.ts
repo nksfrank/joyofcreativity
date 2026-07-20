@@ -1,5 +1,4 @@
 import { Effect } from "effect";
-import { getProductById } from "@/libs/product";
 import { ProductCatalogue } from "@/libs/product-catalogue";
 import type { Database } from "@/server/db/client";
 import {
@@ -15,6 +14,7 @@ import {
   type StripeError,
 } from "@/server/stripe";
 import type { LineProblem } from "./checkout";
+import { perProduct } from "./per-product";
 import { type QuoteLine, QuoteSigner, type SignedQuote } from "./quote";
 import { readShortfalls } from "./stock-gate";
 
@@ -70,26 +70,23 @@ const quoteProblem = (reason: "signature" | "expired"): LineProblem =>
       };
 
 /**
- * A human-readable descriptor for a quote line, resolved from the catalogue at
- * commit time (the quote carries no display — `validateCheckout` strips it, #64).
- * Feeds both Stripe's `product_data.name` and the order line's `display` snapshot,
- * e.g. "Ivory Small — Plain". Tolerant: an unresolvable part falls back to its id
- * so a session is never blocked on a cosmetic lookup.
+ * A line-descriptor closure that resolves a quote line to a human-readable string
+ * at commit time (the quote carries no display — `validateCheckout` strips it,
+ * #64). The descriptor feeds both Stripe's `product_data.name` and the order line's
+ * `display` snapshot, e.g. "Ivory Small — Plain". The blank/pattern display lives
+ * on {@link ProductCatalogue.describeSelection}; the catalogue is memoized per
+ * product via {@link perProduct} (the same scaffolding `classifyCart` uses for its
+ * engines) so a multi-line cart of one family builds a single catalogue. Tolerant:
+ * an unknown product falls back to the blank id so a session is never blocked on a
+ * cosmetic lookup.
  */
-const describeLine = (line: QuoteLine): string => {
-  const definition = getProductById(line.productId);
-  if (!definition) {
-    return line.item.blankId;
-  }
-  const catalogue = new ProductCatalogue(definition);
-  const blank = catalogue.getOfferedBlank(line.item.blankId);
-  const variant = catalogue.getPatternVariant(line.item.patternId);
-  return [
-    blank ? catalogue.describe(blank) : line.item.blankId,
-    variant?.pattern.name,
-  ]
-    .filter(Boolean)
-    .join(" — ");
+const lineDescriber = (): ((line: QuoteLine) => string) => {
+  const catalogueFor = perProduct(
+    (definition) => new ProductCatalogue(definition),
+  );
+  return (line) =>
+    catalogueFor(line.productId)?.describeSelection(line.item) ??
+    line.item.blankId;
 };
 
 /**
@@ -117,6 +114,11 @@ export const createCheckoutSession = (
       return { ok: false, problems: [quoteProblem(verification.reason)] };
     }
     const verified = verification.payload;
+
+    // One descriptor for the whole session: catalogues memoize per product, so
+    // the shortfall messages and the order/Stripe display resolve without
+    // rebuilding a catalogue per line.
+    const describeLine = lineDescriber();
 
     // (2) TOCTOU stock gate: a line the live count no longer covers blocks the
     // whole session. The shared gate re-reads live on-hand and never holds or

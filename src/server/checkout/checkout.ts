@@ -5,12 +5,12 @@ import type { StockSnapshot } from "@/libs/blank.types";
 import { onHand } from "@/libs/blank.utils";
 import type { CurrencyCode } from "@/libs/money";
 import { PricingManager } from "@/libs/pricing";
-import { getProductById } from "@/libs/product";
 import type { ProductDefinition, ProductOrderItem } from "@/libs/product.types";
 import { ProductCatalogue } from "@/libs/product-catalogue";
 import type { Database } from "@/server/db/client";
 import { getOnHandForBlanks, type StockReadError } from "@/server/db/stock";
 import { ProductOrderItemSchema } from "./codecs";
+import { perProduct } from "./per-product";
 import {
   QUOTE_TTL_MS,
   type QuoteLine,
@@ -154,23 +154,13 @@ export const classifyCart = (
   request: CheckoutRequest,
   snapshot: StockSnapshot,
 ): CartClassification => {
-  const engines = new Map<string, FamilyEngines | null>();
-  const enginesFor = (productId: string): FamilyEngines | null => {
-    if (!engines.has(productId)) {
-      const definition = getProductById(productId);
-      engines.set(
-        productId,
-        definition
-          ? {
-              definition,
-              catalogue: new ProductCatalogue(definition),
-              pricing: new PricingManager(definition),
-            }
-          : null,
-      );
-    }
-    return engines.get(productId) ?? null;
-  };
+  const enginesFor = perProduct(
+    (definition): FamilyEngines => ({
+      definition,
+      catalogue: new ProductCatalogue(definition),
+      pricing: new PricingManager(definition),
+    }),
+  );
 
   const problems: LineProblem[] = [];
   const pricedLines: PricedLine[] = [];
