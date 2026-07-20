@@ -14,7 +14,7 @@ import { handleStripeWebhook } from "@/server/stripe-webhook";
  * `import { env } from "cloudflare:workers"` — the repo's env boundary
  * (ADR-0013/0014): `Astro.locals.runtime.env` was removed in this adapter
  * version and throws, despite the ticket's wording. The SDK key stays behind the
- * single `layerFromEnv()` seam (ADR-0015); this route reads only the webhook
+ * single `layerFromEnv()` seam (ADR-0019); this route reads only the webhook
  * signing secret directly. The handler in `src/server/` owns the raw-body read,
  * verification, and the 200/400 mapping; this route only wires env and delegates.
  */

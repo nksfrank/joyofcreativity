@@ -1,4 +1,4 @@
-# 15. Stripe behind a thin adapter port, faked for tests
+# 19. Stripe behind a thin adapter port, faked for tests
 
 Status: Accepted
 
