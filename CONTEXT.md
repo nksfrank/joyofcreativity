@@ -59,6 +59,12 @@ Use these terms verbatim in code, tests, issues, and docs. Avoid the listed syno
   never by feasibility leaving one option enabled. See ADR-0010. A sole colour hides its switcher
   `<nav>` since there is nothing to navigate to — see ADR-0011.
 
+- **Wire Codec** *(new)* — an `effect/Schema` in `src/server/checkout/` that defines a shape
+  crossing the checkout wire (request, signed quote). Kept out of `src/libs/` because `effect` is
+  barred there (ADR-0013/0014); each codec that restates a domain shape is pinned to it by a
+  compile-time `Equals` assertion, so drift fails `tsc`. _Not_ a duplicate of the domain type — a
+  boundary-layer mirror of it.
+
 - **Stock Gate** *(new)* — the single server module that answers "does live D1
   on-hand cover this quantity?" for a set of lines (`src/server/checkout/stock-gate.ts`).
   Both authoritative checkpoints use it: `validateCheckout`'s add-time out-of-stock
