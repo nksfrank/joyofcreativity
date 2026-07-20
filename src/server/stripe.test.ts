@@ -2,10 +2,18 @@ import { Effect, Exit, type Layer } from "effect";
 import { describe, expect, it } from "vitest";
 import {
   type CreateCheckoutSession,
+  layer as liveLayer,
   makeFakeStripe,
   Stripe,
   StripeError,
 } from "./stripe";
+import {
+  signWebhookPayload,
+  TEST_EVENT,
+  TEST_EVENT_BODY,
+  TEST_SECRET_KEY,
+  TEST_WEBHOOK_SECRET,
+} from "./stripe.testkit";
 
 /** A representative embedded-checkout request, in the shop's minor-units money. */
 const request: CreateCheckoutSession = {
@@ -77,6 +85,61 @@ describe("Stripe port (faked)", () => {
     const exit = await run(
       useStripe((stripe) => stripe.createCheckoutSession(request)),
       fake.layer,
+    );
+
+    expect(Exit.isFailure(exit)).toBe(true);
+  });
+});
+
+describe("Stripe port webhook verification (live layer, no network)", () => {
+  const layer = liveLayer(TEST_SECRET_KEY);
+
+  it("verifies a correctly-signed event and returns its id + type", async () => {
+    const signature = signWebhookPayload(TEST_EVENT_BODY);
+
+    const exit = await run(
+      useStripe((stripe) =>
+        stripe.constructWebhookEvent({
+          payload: TEST_EVENT_BODY,
+          signature,
+          secret: TEST_WEBHOOK_SECRET,
+        }),
+      ),
+      layer,
+    );
+
+    expect(exit).toStrictEqual(Exit.succeed(TEST_EVENT));
+  });
+
+  it("fails with a StripeError when the signature does not match the body", async () => {
+    // A valid header for a different payload than the one we hand over: the
+    // classic tamper — right shape, wrong signature.
+    const signature = signWebhookPayload("{}");
+
+    const exit = await run(
+      useStripe((stripe) =>
+        stripe.constructWebhookEvent({
+          payload: TEST_EVENT_BODY,
+          signature,
+          secret: TEST_WEBHOOK_SECRET,
+        }),
+      ),
+      layer,
+    );
+
+    expect(Exit.isFailure(exit)).toBe(true);
+  });
+
+  it("fails with a StripeError when the signature header is absent", async () => {
+    const exit = await run(
+      useStripe((stripe) =>
+        stripe.constructWebhookEvent({
+          payload: TEST_EVENT_BODY,
+          signature: null,
+          secret: TEST_WEBHOOK_SECRET,
+        }),
+      ),
+      layer,
     );
 
     expect(Exit.isFailure(exit)).toBe(true);
