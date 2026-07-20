@@ -4,11 +4,11 @@ import { ActionError, defineAction } from "astro:actions";
 // Everything past this line is Effect + effect/Schema (ADR-0014).
 import { env } from "cloudflare:workers";
 import { z } from "astro/zod";
-import { Cause, Effect, Exit, Layer } from "effect";
+import { Cause, Effect, Exit, Layer, Schema } from "effect";
 import { isParseError, TreeFormatter } from "effect/ParseResult";
 import { validateCheckout } from "@/server/checkout/checkout";
 import { quoteSignerFromEnv } from "@/server/checkout/checkout.env";
-import type { SignedQuote } from "@/server/checkout/quote";
+import { SignedQuoteSchema } from "@/server/checkout/quote";
 import { createCheckoutSession } from "@/server/checkout/session";
 import { createDb, Database } from "@/server/db/client";
 import { getStockForProduct } from "@/server/db/stock";
@@ -180,30 +180,13 @@ export const server = {
    * outcomes returned in the payload; only an infrastructure fault is a 500.
    */
   createCheckoutSession: defineAction({
+    // The zod `input` guards only the wire shape Astro forces (ADR-0014): the
+    // quote is passed through as `unknown` and decoded by the one source of the
+    // quote's shape — `SignedQuoteSchema` — inside the Effect program below, so
+    // there is no hand-maintained schema mirror and no `as SignedQuote` cast
+    // (#54 architecture review, candidate 2).
     input: z.object({
-      quote: z.object({
-        lines: z.array(
-          z.object({
-            productId: z.string(),
-            item: z.object({
-              blankId: z.string(),
-              patternId: z.string(),
-              yarnColorIds: z.array(z.string()),
-              customisation: z.string(),
-            }),
-            quantity: z.number(),
-            unitPrice: z.object({
-              amount: z.number(),
-              currency: z.string(),
-            }),
-          }),
-        ),
-        currency: z.string(),
-        issuedAt: z.number(),
-        expiresAt: z.number(),
-        quoteId: z.string(),
-        signature: z.string(),
-      }),
+      quote: z.unknown(),
       returnUrl: z.url(),
     }),
     handler: async ({ quote, returnUrl }) => {
@@ -213,22 +196,31 @@ export const server = {
         stripeFromEnv(),
       );
 
-      // The zod schema only proves wire shape; the HMAC verify inside
-      // `createCheckoutSession` re-establishes authority, so the cast is safe.
-      const exit = await Effect.runPromiseExit(
-        Effect.provide(
-          createCheckoutSession(quote as SignedQuote, returnUrl, Date.now()),
-          layer,
+      // Decode the carried quote through the shared schema (parse, don't cast),
+      // then commit. A malformed quote is a `ParseError` → 400; the HMAC verify
+      // inside `createCheckoutSession` still re-establishes authority regardless.
+      const program = Schema.decodeUnknown(SignedQuoteSchema)(quote).pipe(
+        Effect.flatMap((decoded) =>
+          createCheckoutSession(decoded, returnUrl, Date.now()),
         ),
       );
+      const exit = await Effect.runPromiseExit(Effect.provide(program, layer));
 
       if (Exit.isSuccess(exit)) {
         return exit.value;
       }
 
-      // Every typed failure here (StockReadError, OrderWriteError, StripeError)
-      // is infrastructure → 500; the customer-facing blocks are successful
-      // results, not failures. Same translation shape as the other Actions.
+      // A decode error is a malformed quote → 400; every typed failure
+      // (StockReadError, OrderWriteError, StripeError) is infrastructure → 500.
+      // The customer-facing blocks are successful results, not failures. Same
+      // translation shape as the other Actions.
+      const failure = Cause.failureOption(exit.cause);
+      if (failure._tag === "Some" && isParseError(failure.value)) {
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message: TreeFormatter.formatErrorSync(failure.value),
+        });
+      }
       throw new ActionError({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to create checkout session",

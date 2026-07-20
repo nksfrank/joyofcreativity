@@ -57,6 +57,15 @@ Use these terms verbatim in code, tests, issues, and docs. Avoid the listed syno
   never by feasibility leaving one option enabled. See ADR-0010. A sole colour hides its switcher
   `<nav>` since there is nothing to navigate to — see ADR-0011.
 
+- **Stock Gate** *(new)* — the single server module that answers "does live D1
+  on-hand cover this quantity?" for a set of lines (`src/server/checkout/stock-gate.ts`).
+  Both authoritative checkpoints use it: `validateCheckout`'s add-time out-of-stock
+  check and `createCheckoutSession`'s commit-time TOCTOU gate. Quantity-aware, built
+  on the `onHand` primitive (`blank.utils.ts`) so the "a Blank absent from a
+  `StockSnapshot` counts as zero" rule is shared with the availability engine and the
+  configurator. A *check*, never a hold — stock is neither reserved nor decremented
+  here (#34/#35).
+
 ## Money
 
 All prices are integer **minor units** (öre / cents) in a single `Price { amount, currency }`.

@@ -139,11 +139,13 @@ describe("createCheckoutSession (real migrated D1, faked Stripe)", () => {
 
     const exit = await runSession(tampered, fake);
     if (Exit.isFailure(exit)) throw new Error("expected a handled result");
-    expect(exit.value).toStrictEqual({
-      ok: false,
-      reason: "quote_invalid",
-      detail: "signature",
-    });
+    const result = exit.value;
+    if (result.ok) throw new Error("expected a blocked result");
+    // A forged signature is a cart-level `tampered` problem — the same taxonomy
+    // the add-time checkpoint uses (candidate 3).
+    expect(result.problems.map((p) => [p.index, p.bucket])).toStrictEqual([
+      [-1, "tampered"],
+    ]);
     expect(fake.calls.createCheckoutSession).toHaveLength(0);
   });
 
@@ -153,11 +155,12 @@ describe("createCheckoutSession (real migrated D1, faked Stripe)", () => {
 
     const exit = await runSession(quote, fake, NOW + QUOTE_TTL_MS + 1);
     if (Exit.isFailure(exit)) throw new Error("expected a handled result");
-    expect(exit.value).toStrictEqual({
-      ok: false,
-      reason: "quote_invalid",
-      detail: "expired",
-    });
+    const result = exit.value;
+    if (result.ok) throw new Error("expected a blocked result");
+    // A lapsed lock is `price_drift` — the one sanctioned producer of that bucket.
+    expect(result.problems.map((p) => [p.index, p.bucket])).toStrictEqual([
+      [-1, "price_drift"],
+    ]);
     expect(fake.calls.createCheckoutSession).toHaveLength(0);
   });
 
@@ -179,11 +182,12 @@ describe("createCheckoutSession (real migrated D1, faked Stripe)", () => {
 
       const exit = await runSession(quote, fake);
       if (Exit.isFailure(exit)) throw new Error("expected a handled result");
-      expect(exit.value).toStrictEqual({
-        ok: false,
-        reason: "out_of_stock",
-        lines: [0],
-      });
+      const result = exit.value;
+      if (result.ok) throw new Error("expected a blocked result");
+      // The TOCTOU shortfall surfaces per line, in the shared taxonomy.
+      expect(result.problems.map((p) => [p.index, p.bucket])).toStrictEqual([
+        [0, "out_of_stock"],
+      ]);
       // Blocked before Stripe, and the gate never touched stock.
       expect(fake.calls.createCheckoutSession).toHaveLength(0);
       expect((await onHand("blank2"))?.onHand).toBe(2);

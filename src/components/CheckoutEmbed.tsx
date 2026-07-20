@@ -11,12 +11,6 @@ type ValidateData = Awaited<
 >["data"];
 type Quote = Extract<NonNullable<ValidateData>, { ok: true }>["quote"];
 
-// The quote shape the `createCheckoutSession` Action accepts — identical to
-// `Quote` but with mutable `lines` — so the carry-back is a single named cast.
-type CreateSessionQuote = Parameters<
-  typeof actions.createCheckoutSession
->[0]["quote"];
-
 type Props = {
   quote: Quote;
 };
@@ -53,10 +47,9 @@ export default function CheckoutEmbed({ quote }: Props) {
           fetchClientSecret: async () => {
             const { data, error: actionError } =
               await actions.createCheckoutSession({
-                // The quote's `lines` are `readonly` on the validate result but
-                // the action input types them mutable; the shapes are otherwise
-                // identical and the server re-verifies the HMAC either way.
-                quote: quote as CreateSessionQuote,
+                // The Action decodes and re-verifies the quote server-side
+                // (SignedQuoteSchema + HMAC), so the client passes it verbatim.
+                quote,
                 returnUrl: `${window.location.origin}/checkout/return`,
               });
             if (actionError || !data || !data.ok) {
