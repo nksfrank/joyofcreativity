@@ -4,7 +4,7 @@ import { ActionError, defineAction } from "astro:actions";
 // Everything past this line is Effect + effect/Schema (ADR-0014).
 import { env } from "cloudflare:workers";
 import { z } from "astro/zod";
-import { Cause, Effect, Exit, Layer, Schema } from "effect";
+import { Effect, Layer, Schema } from "effect";
 import { isParseError, TreeFormatter } from "effect/ParseResult";
 import { validateCheckout } from "@/server/checkout/checkout";
 import { quoteSignerFromEnv } from "@/server/checkout/checkout.env";
@@ -12,58 +12,25 @@ import { SignedQuoteSchema } from "@/server/checkout/quote";
 import { createCheckoutSession } from "@/server/checkout/session";
 import { createDb, Database } from "@/server/db/client";
 import { getStockForProduct } from "@/server/db/stock";
-import { greet, ServerEnv } from "@/server/greeting";
 import { layerFromEnv as stripeFromEnv } from "@/server/stripe.env";
+import { runAction } from "./run-action";
 
 /**
  * The island-facing RPC surface (ADR-0013). The zod `input` here guards only
  * the wire shape Astro's `defineAction` forces (ADR-0014); the real domain
- * validation is `effect/Schema` inside `src/server/`. Each Action hands off to
- * an Effect program there, providing the Cloudflare env — read from
- * `cloudflare:workers` — as a Layer. This boundary is where cross-cutting
- * policies (retry, timeout, rate-limiting) would compose over the program.
+ * validation is `effect/Schema` inside `src/server/`. Each Action builds the
+ * per-invocation env layer — read from `cloudflare:workers` — and hands its
+ * Effect program to `runAction`, the one adapter that runs the program and
+ * translates a typed failure to an `ActionError` (and the single home for
+ * cross-cutting policies like retry/timeout/rate-limiting).
  */
 export const server = {
-  greet: defineAction({
-    input: z.object({
-      name: z.string(),
-    }),
-    handler: async ({ name }) => {
-      const runtimeEnv = Layer.succeed(ServerEnv, {
-        SERVER_SURFACE_GREETING: env.SERVER_SURFACE_GREETING,
-      });
-
-      const exit = await Effect.runPromiseExit(
-        Effect.provide(greet(name), runtimeEnv),
-      );
-
-      if (Exit.isSuccess(exit)) {
-        return exit.value;
-      }
-
-      // A Schema decode error on `name` is a client mistake → bad request with
-      // its message. Any other failure (a defect, or a future typed error the
-      // handler doesn't yet translate) must not masquerade as a 400.
-      const failure = Cause.failureOption(exit.cause);
-      if (failure._tag === "Some" && isParseError(failure.value)) {
-        throw new ActionError({
-          code: "BAD_REQUEST",
-          message: TreeFormatter.formatErrorSync(failure.value),
-        });
-      }
-      throw new ActionError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Greeting failed unexpectedly",
-      });
-    },
-  }),
-
   /**
    * Live stock for a product family (#62): the configurator calls this once on
    * mount to feed the `ConfigurationModel`'s snapshot from D1 — the store the
    * shop controls — rather than a code constant. Thin boundary (ADR-0013): the
    * resolve-then-read lives in `getStockForProduct`; this only validates the wire
-   * shape, provides the D1 layer from the `DB` binding, and translates failures.
+   * shape, provides the D1 layer from the `DB` binding, and maps failures.
    *
    * The snapshot is advisory (ADR-0003): the client still prices and feasibility-
    * checks instantly against it, so there is no server round-trip per selection.
@@ -73,35 +40,23 @@ export const server = {
     input: z.object({
       productId: z.string(),
     }),
-    handler: async ({ productId }) => {
-      const dbLayer = Layer.succeed(Database, createDb(env.DB));
-
-      const exit = await Effect.runPromiseExit(
-        Effect.provide(getStockForProduct(productId), dbLayer),
-      );
-
-      if (Exit.isSuccess(exit)) {
-        return exit.value;
-      }
-
-      // An unknown product is the caller's bad id → 404; a StockReadError (or any
-      // other failure) is infrastructure → 500. Same `Cause.failureOption`
-      // translation shape as `greet`.
-      const failure = Cause.failureOption(exit.cause);
-      if (
-        failure._tag === "Some" &&
-        failure.value._tag === "ProductNotFoundError"
-      ) {
-        throw new ActionError({
-          code: "NOT_FOUND",
-          message: `Unknown product ${productId}`,
-        });
-      }
-      throw new ActionError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to read stock",
-      });
-    },
+    // An unknown product is the caller's bad id → 404; a StockReadError (or any
+    // other failure) is infrastructure → 500.
+    handler: ({ productId }) =>
+      runAction(
+        getStockForProduct(productId),
+        Layer.succeed(Database, createDb(env.DB)),
+        {
+          translate: (failure) =>
+            failure._tag === "ProductNotFoundError"
+              ? new ActionError({
+                  code: "NOT_FOUND",
+                  message: `Unknown product ${productId}`,
+                })
+              : undefined,
+          fallbackMessage: "Failed to read stock",
+        },
+      ),
   }),
 
   /**
@@ -131,35 +86,26 @@ export const server = {
         }),
       ),
     }),
-    handler: async (request) => {
-      const layer = Layer.merge(
-        Layer.succeed(Database, createDb(env.DB)),
-        quoteSignerFromEnv(),
-      );
-
-      const exit = await Effect.runPromiseExit(
-        Effect.provide(validateCheckout(request, Date.now()), layer),
-      );
-
-      if (Exit.isSuccess(exit)) {
-        return exit.value;
-      }
-
-      // A Schema decode error is a malformed cart → bad request; a StockReadError
-      // (or any other failure) is infrastructure → 500. Same translation shape as
-      // the other Actions.
-      const failure = Cause.failureOption(exit.cause);
-      if (failure._tag === "Some" && isParseError(failure.value)) {
-        throw new ActionError({
-          code: "BAD_REQUEST",
-          message: TreeFormatter.formatErrorSync(failure.value),
-        });
-      }
-      throw new ActionError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to validate checkout",
-      });
-    },
+    // A Schema decode error is a malformed cart → bad request; a StockReadError
+    // (or any other failure) is infrastructure → 500.
+    handler: (request) =>
+      runAction(
+        validateCheckout(request, Date.now()),
+        Layer.merge(
+          Layer.succeed(Database, createDb(env.DB)),
+          quoteSignerFromEnv(),
+        ),
+        {
+          translate: (failure) =>
+            isParseError(failure)
+              ? new ActionError({
+                  code: "BAD_REQUEST",
+                  message: TreeFormatter.formatErrorSync(failure),
+                })
+              : undefined,
+          fallbackMessage: "Failed to validate checkout",
+        },
+      ),
   }),
 
   /**
@@ -189,42 +135,34 @@ export const server = {
       quote: z.unknown(),
       returnUrl: z.url(),
     }),
-    handler: async ({ quote, returnUrl }) => {
-      const layer = Layer.mergeAll(
-        Layer.succeed(Database, createDb(env.DB)),
-        quoteSignerFromEnv(),
-        stripeFromEnv(),
-      );
-
-      // Decode the carried quote through the shared schema (parse, don't cast),
-      // then commit. A malformed quote is a `ParseError` → 400; the HMAC verify
-      // inside `createCheckoutSession` still re-establishes authority regardless.
-      const program = Schema.decodeUnknown(SignedQuoteSchema)(quote).pipe(
-        Effect.flatMap((decoded) =>
-          createCheckoutSession(decoded, returnUrl, Date.now()),
+    // Decode the carried quote through the shared schema (parse, don't cast),
+    // then commit. A `ParseError` from a malformed quote is a bad request → 400;
+    // every other typed failure (StockReadError, OrderWriteError, StripeError) is
+    // infrastructure → 500. The customer-facing blocks (quote_invalid,
+    // out_of_stock) are successful results, not failures. The HMAC verify inside
+    // `createCheckoutSession` re-establishes authority regardless of the decode.
+    handler: ({ quote, returnUrl }) =>
+      runAction(
+        Schema.decodeUnknown(SignedQuoteSchema)(quote).pipe(
+          Effect.flatMap((decoded) =>
+            createCheckoutSession(decoded, returnUrl, Date.now()),
+          ),
         ),
-      );
-      const exit = await Effect.runPromiseExit(Effect.provide(program, layer));
-
-      if (Exit.isSuccess(exit)) {
-        return exit.value;
-      }
-
-      // A decode error is a malformed quote → 400; every typed failure
-      // (StockReadError, OrderWriteError, StripeError) is infrastructure → 500.
-      // The customer-facing blocks are successful results, not failures. Same
-      // translation shape as the other Actions.
-      const failure = Cause.failureOption(exit.cause);
-      if (failure._tag === "Some" && isParseError(failure.value)) {
-        throw new ActionError({
-          code: "BAD_REQUEST",
-          message: TreeFormatter.formatErrorSync(failure.value),
-        });
-      }
-      throw new ActionError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to create checkout session",
-      });
-    },
+        Layer.mergeAll(
+          Layer.succeed(Database, createDb(env.DB)),
+          quoteSignerFromEnv(),
+          stripeFromEnv(),
+        ),
+        {
+          translate: (failure) =>
+            isParseError(failure)
+              ? new ActionError({
+                  code: "BAD_REQUEST",
+                  message: TreeFormatter.formatErrorSync(failure),
+                })
+              : undefined,
+          fallbackMessage: "Failed to create checkout session",
+        },
+      ),
   }),
 };
