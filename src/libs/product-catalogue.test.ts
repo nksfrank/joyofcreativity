@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Blank, Color, Size } from "./blank.types";
 import { Catalogue } from "./catalogue";
-import type { PatternVariant, ProductDefinition } from "./product.types";
+import type {
+  PatternVariant,
+  ProductDefinition,
+  ProductOrderItem,
+} from "./product.types";
 import { ProductCatalogue } from "./product-catalogue";
 
 const noModifier = { value: 0, type: "fixed" as const };
@@ -133,6 +137,34 @@ describe("ProductCatalogue", () => {
       };
       expect(products.describe(blank)).toBe(catalogue.describe(blank));
       expect(products.describe(blank)).toBe("Cream Small");
+    });
+  });
+
+  describe("describeSelection", () => {
+    const item = (
+      overrides: Partial<ProductOrderItem> = {},
+    ): ProductOrderItem => ({
+      blankId: "blank1",
+      patternId: "twin",
+      yarnColorIds: [],
+      customisation: "",
+      ...overrides,
+    });
+
+    it("joins the offered blank label and the pattern name", () => {
+      expect(products.describeSelection(item())).toBe("Cream Small — Twin");
+    });
+
+    it("falls back to the blank id when the blank is not offered", () => {
+      expect(products.describeSelection(item({ blankId: "blank9" }))).toBe(
+        "blank9 — Twin",
+      );
+    });
+
+    it("omits the pattern when it is not offered", () => {
+      expect(products.describeSelection(item({ patternId: "nope" }))).toBe(
+        "Cream Small",
+      );
     });
   });
 
